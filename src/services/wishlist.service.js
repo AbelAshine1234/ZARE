@@ -1,0 +1,2 @@
+// wishlist service
+module.exports = {};

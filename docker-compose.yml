@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # Redis for Bull Queue
+  redis:
+    image: redis:7-alpine
+    container_name: zare-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    networks:
+      - zare-network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: zare-postgres
+    environment:
+      POSTGRES_DB: zare_db
+      POSTGRES_USER: zare_user
+      POSTGRES_PASSWORD: zare_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - zare-network
+
+  # Main API Service
+  api:
+    build: .
+    container_name: zare-api
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      DATABASE_URL: postgresql://zare_user:zare_password@postgres:5432/zare_db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    networks:
+      - zare-network
+    command: npm run dev
+
+  # Queue Worker Service
+  worker:
+    build: .
+    container_name: zare-worker
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://zare_user:zare_password@postgres:5432/zare_db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    networks:
+      - zare-network
+    command: node src/workers/queue.worker.js
+
+volumes:
+  redis_data:
+  postgres_data:
+
+networks:
+  zare-network:
+    driver: bridge 

@@ -1,0 +1,2 @@
+// adsyoumightbeinterestedin service
+module.exports = {};

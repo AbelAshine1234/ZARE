@@ -1,0 +1,2 @@
+// complaint service
+module.exports = {};

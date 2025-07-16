@@ -1,0 +1,2 @@
+// adsyoumightbeinterestedin controller
+module.exports = {};

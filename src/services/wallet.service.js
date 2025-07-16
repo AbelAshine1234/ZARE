@@ -1,0 +1,2 @@
+// wallet service
+module.exports = {};

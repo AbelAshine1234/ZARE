@@ -1,0 +1,2 @@
+// wishlist controller
+module.exports = {};

@@ -1,0 +1,1012 @@
+{
+	"info": {
+		"_postman_id": "bee80939-c854-4fac-9da2-6838d9143163",
+		"name": "ZareBackend",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "33810044"
+	},
+	"item": [
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Get All Users",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"girma\",\r\n  \"phone\": \"+251911223344\",\r\n  \"password\": \"secret123\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/users"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User By Id",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"girma\",\r\n  \"phone\": \"+251911223344\",\r\n  \"password\": \"secret123\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/users/4"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"girma\",\r\n  \"phone\": \"+251911223344\",\r\n  \"password\": \"secret123\"\r\n}\r\n"
+						},
+						"url": "{{base_url}}/users/4"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Register Admin",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "name",
+									"value": "\tJohn Doe",
+									"type": "text"
+								},
+								{
+									"key": "phone_number",
+									"value": "+251986064500",
+									"type": "text"
+								},
+								{
+									"key": "password",
+									"value": "StrongPass123!",
+									"type": "text"
+								},
+								{
+									"key": "picture",
+									"type": "file",
+									"src": "/C:/Users/Abel/Downloads/photo_2025-07-08_08-58-58 (2).jpg"
+								}
+							]
+						},
+						"url": "{{base_url}}/auth/register-admin"
+					},
+					"response": []
+				},
+				{
+					"name": "Register Delivery",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "name",
+									"value": "\tJohn Doe",
+									"type": "text"
+								},
+								{
+									"key": "phone_number",
+									"value": "+251986064500",
+									"type": "text"
+								},
+								{
+									"key": "password",
+									"value": "StrongPass123!",
+									"type": "text"
+								},
+								{
+									"key": "picture",
+									"type": "file",
+									"src": "/C:/Users/Abel/Downloads/photo_2025-07-08_08-58-58 (2).jpg"
+								}
+							]
+						},
+						"url": "{{base_url}}/auth/register-delivery"
+					},
+					"response": []
+				},
+				{
+					"name": "Verify OTP",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "name",
+									"value": "\tJohn Doe",
+									"type": "text"
+								},
+								{
+									"key": "phone_number",
+									"value": "+251978456747",
+									"type": "text"
+								},
+								{
+									"key": "password",
+									"value": "StrongPass123!",
+									"type": "text"
+								},
+								{
+									"key": "picture",
+									"type": "file",
+									"src": "/C:/Users/Abel/Downloads/photo_2025-07-08_08-58-58 (2).jpg"
+								}
+							]
+						},
+						"url": "{{base_url}}/auth/register-client"
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n\r\n  \"phone_number\": \"+251986064500\",\r\n  \"password\":\"StrongPass123!\"\r\n  \r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/auth/login"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User By Id",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"girma\",\r\n  \"phone\": \"+251911223344\",\r\n  \"password\": \"secret123\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/users/4"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"girma\",\r\n  \"phone\": \"+251911223344\",\r\n  \"password\": \"secret123\"\r\n}\r\n"
+						},
+						"url": "{{base_url}}/users/4"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Cataegory",
+			"item": [
+				{
+					"name": "Create Catagory",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwidHlwZSI6ImFkbWluIiwiaWF0IjoxNzUyNjcyNjU3LCJleHAiOjE3NTMyNzc0NTd9.abenSzssrMSpMw0s1FTPFrTmKsR5EDGqCKLKnhAVeeM"
+							}
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "category_pictures",
+									"type": "file",
+									"src": [
+										"/C:/Users/Abel/Pictures/Screenshot 2025-06-05 225856.png",
+										"/C:/Users/Abel/Pictures/Screenshot 2025-06-05 225856.png"
+									]
+								},
+								{
+									"key": "name",
+									"value": "Cloth",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "this is t",
+									"type": "text"
+								}
+							]
+						},
+						"url": "{{base_url}}/category"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Catageories",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MywidHlwZSI6ImNsaWVudCIsImlhdCI6MTc1NTAwNDMzMCwiZXhwIjoxNzU1NjA5MTMwfQ.vtgtxhpxFTJjZ4ueEb-Lr1T2VEE-DVdiAjxjrIrV4cU"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"girma\",\r\n  \"phone\": \"+251911223344\",\r\n  \"password\": \"secret123\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/category"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Subcatagories buy this catagory",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwidHlwZSI6ImFkbWluIiwiaWF0IjoxNzUyNjcyNjU3LCJleHAiOjE3NTMyNzc0NTd9.abenSzssrMSpMw0s1FTPFrTmKsR5EDGqCKLKnhAVeeM"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"girma\",\r\n  \"phone\": \"+251911223344\",\r\n  \"password\": \"secret123\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/category"
+					},
+					"response": []
+				},
+				{
+					"name": "Get A single categeory",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwidHlwZSI6ImFkbWluIiwiaWF0IjoxNzUyNjcyNjU3LCJleHAiOjE3NTMyNzc0NTd9.abenSzssrMSpMw0s1FTPFrTmKsR5EDGqCKLKnhAVeeM"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"girma\",\r\n  \"phone\": \"+251911223344\",\r\n  \"password\": \"secret123\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/category/1"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Categeory",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwidHlwZSI6ImFkbWluIiwiaWF0IjoxNzUyNjcyNjU3LCJleHAiOjE3NTMyNzc0NTd9.abenSzssrMSpMw0s1FTPFrTmKsR5EDGqCKLKnhAVeeM"
+							}
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "name",
+									"value": "great",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "why",
+									"type": "text"
+								},
+								{
+									"key": "file",
+									"type": "file",
+									"src": "/C:/Users/Abel/Downloads/45ac8085e1d5b9e8bc5f89f3b97d354c593475a5.png",
+									"disabled": true
+								},
+								{
+									"key": "keepImages",
+									"value": "[37]",
+									"type": "text"
+								}
+							]
+						},
+						"url": "{{base_url}}/category/1"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Category",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwidHlwZSI6ImFkbWluIiwiaWF0IjoxNzUyNjcyNjU3LCJleHAiOjE3NTMyNzc0NTd9.abenSzssrMSpMw0s1FTPFrTmKsR5EDGqCKLKnhAVeeM"
+							}
+						},
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "name",
+									"value": "great",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "why",
+									"type": "text"
+								},
+								{
+									"key": "file",
+									"type": "file",
+									"src": "/C:/Users/Abel/Downloads/45ac8085e1d5b9e8bc5f89f3b97d354c593475a5.png",
+									"disabled": true
+								},
+								{
+									"key": "keepImages",
+									"value": "[37]",
+									"type": "text"
+								}
+							]
+						},
+						"url": "{{base_url}}/category/2"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Sub Cataegory",
+			"item": [
+				{
+					"name": "Create Subcategoery",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwidHlwZSI6ImFkbWluIiwiaWF0IjoxNzUyNjcyNjU3LCJleHAiOjE3NTMyNzc0NTd9.abenSzssrMSpMw0s1FTPFrTmKsR5EDGqCKLKnhAVeeM"
+							}
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "subcategory_pictures",
+									"type": "file",
+									"src": "/C:/Users/Abel/Downloads/photo_2025-07-08_08-58-58 (2).jpg"
+								},
+								{
+									"key": "name",
+									"value": "mansdfs",
+									"type": "text"
+								},
+								{
+									"key": "category_id",
+									"value": "1",
+									"type": "text"
+								}
+							]
+						},
+						"url": "{{base_url}}/subcategory"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All  Sub Catageories",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwidHlwZSI6ImFkbWluIiwiaWF0IjoxNzUyNjcyNjU3LCJleHAiOjE3NTMyNzc0NTd9.abenSzssrMSpMw0s1FTPFrTmKsR5EDGqCKLKnhAVeeM"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"girma\",\r\n  \"phone\": \"+251911223344\",\r\n  \"password\": \"secret123\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/subcategory"
+					},
+					"response": []
+				},
+				{
+					"name": "Get A single subcatagory",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwidHlwZSI6ImFkbWluIiwiaWF0IjoxNzUyNjcyNjU3LCJleHAiOjE3NTMyNzc0NTd9.abenSzssrMSpMw0s1FTPFrTmKsR5EDGqCKLKnhAVeeM"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"girma\",\r\n  \"phone\": \"+251911223344\",\r\n  \"password\": \"secret123\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/subcategory/5"
+					},
+					"response": []
+				},
+				{
+					"name": "Update subcatagory",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwidHlwZSI6ImFkbWluIiwiaWF0IjoxNzUyNjcyNjU3LCJleHAiOjE3NTMyNzc0NTd9.abenSzssrMSpMw0s1FTPFrTmKsR5EDGqCKLKnhAVeeM"
+							}
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "category_id",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "name",
+									"value": "fdsa",
+									"type": "text"
+								},
+								{
+									"key": "subcategory_pictures",
+									"type": "file",
+									"src": [
+										"/C:/Users/Abel/Downloads/photo_2025-07-08_08-58-58.jpg",
+										"/C:/Users/Abel/Downloads/photo_2025-07-08_08-58-58 (2).jpg"
+									],
+									"disabled": true
+								},
+								{
+									"key": "keepImages",
+									"value": "[7]",
+									"type": "text"
+								}
+							]
+						},
+						"url": "{{base_url}}/subcategory/5"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Category",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwidHlwZSI6ImFkbWluIiwiaWF0IjoxNzUyNjcyNjU3LCJleHAiOjE3NTMyNzc0NTd9.abenSzssrMSpMw0s1FTPFrTmKsR5EDGqCKLKnhAVeeM"
+							}
+						},
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "name",
+									"value": "great",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "why",
+									"type": "text"
+								},
+								{
+									"key": "file",
+									"type": "file",
+									"src": "/C:/Users/Abel/Downloads/45ac8085e1d5b9e8bc5f89f3b97d354c593475a5.png",
+									"disabled": true
+								},
+								{
+									"key": "keepImages",
+									"value": "[37]",
+									"type": "text"
+								}
+							]
+						},
+						"url": "{{base_url}}/category/2"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Vendor",
+			"item": [
+				{
+					"name": "Create Individual Vendor",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MywidHlwZSI6ImNsaWVudCIsImlhdCI6MTc1NTAwNDMzMCwiZXhwIjoxNzU1NjA5MTMwfQ.vtgtxhpxFTJjZ4ueEb-Lr1T2VEE-DVdiAjxjrIrV4cU"
+							}
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "name",
+									"value": "hello",
+									"type": "text"
+								},
+								{
+									"key": "cover_image",
+									"type": "file",
+									"src": [
+										"/C:/Users/Abel/Pictures/Screenshot 2025-06-10 162742.png",
+										"/C:/Users/Abel/Pictures/Screenshot 2025-06-07 080545.png"
+									]
+								},
+								{
+									"key": "fayda_image",
+									"type": "file",
+									"src": "/C:/Users/Abel/Pictures/Screenshot 2025-06-05 225856.png"
+								},
+								{
+									"key": "user_id",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "category_ids",
+									"value": "[1]",
+									"type": "text"
+								},
+								{
+									"key": "payment_method",
+									"value": "{\n    \"name\": \"CBE Mobile Payment\",\n    \"account_number\": \"0912345678\",\n    \"account_holder\": \"Abel Ashine\",\n    \"type\": \"Mobile Money\",\n    \"details\": {\n      \"provider\": \"CBE Mobile\",\n      \"branch\": \"Addis Ababa\",\n      \"notes\": \"Use this account for all mobile payments.\"\n    }\n  }",
+									"type": "text"
+								},
+								{
+									"key": "subscription_id",
+									"value": "1",
+									"type": "text"
+								}
+							]
+						},
+						"url": "{{base_url}}/vendors/individual"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Business Vendor",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MywidHlwZSI6ImNsaWVudCIsImlhdCI6MTc1NTAwNDMzMCwiZXhwIjoxNzU1NjA5MTMwfQ.vtgtxhpxFTJjZ4ueEb-Lr1T2VEE-DVdiAjxjrIrV4cU"
+							}
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "name",
+									"value": "hello",
+									"type": "text"
+								},
+								{
+									"key": "cover_image",
+									"type": "file",
+									"src": [
+										"/C:/Users/Abel/Pictures/Screenshot 2025-06-10 162742.png",
+										"/C:/Users/Abel/Pictures/photo_2025-05-18_20-41-46.jpg"
+									]
+								},
+								{
+									"key": "business_license_image",
+									"type": "file",
+									"src": [
+										"/C:/Users/Abel/Pictures/Screenshot 2025-06-10 001722.png",
+										"/C:/Users/Abel/Pictures/photo_2025-05-18_20-41-46.jpg"
+									]
+								},
+								{
+									"key": "user_id",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "category_ids",
+									"value": "[1]",
+									"type": "text"
+								},
+								{
+									"key": "payment_method",
+									"value": "{\n    \"name\": \"CBE Mobile Payment\",\n    \"account_number\": \"0912345678\",\n    \"account_holder\": \"Abel Ashine\",\n    \"type\": \"Mobile Money\",\n    \"details\": {\n      \"provider\": \"CBE Mobile\",\n      \"branch\": \"Addis Ababa\",\n      \"notes\": \"Use this account for all mobile payments.\"\n    }\n  }",
+									"type": "text"
+								},
+								{
+									"key": "subscription_id",
+									"value": "1",
+									"type": "text"
+								}
+							]
+						},
+						"url": "{{base_url}}/vendors/business"
+					},
+					"response": []
+				},
+				{
+					"name": "Get all vendors",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Subscription",
+			"item": [
+				{
+					"name": "Create Subscription",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"amount\": 0.00,\r\n  \"plan\": \"FREE\",\r\n  \"start_date\": \"2025-09-01T00:00:00.000Z\",\r\n  \"end_date\": \"2026-08-31T23:59:59.999Z\",\r\n  \"status\": \"active\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/subscription"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Subscription",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"amount\": 0.00,\r\n  \"plan\": \"FREE\",\r\n  \"start_date\": \"2025-09-01T00:00:00.000Z\",\r\n  \"end_date\": \"2026-08-31T23:59:59.999Z\",\r\n  \"status\": \"active\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/subscription"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Products",
+			"item": [
+				{
+					"name": "Get all products",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				},
+				{
+					"name": "Create Product",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "images",
+									"type": "file",
+									"src": [
+										"/C:/Users/Abel/Pictures/Screenshot 2025-06-09 135845.png",
+										"/C:/Users/Abel/Pictures/Screenshot 2025-06-12 181009.png"
+									]
+								},
+								{
+									"key": "name",
+									"value": "libs",
+									"type": "text"
+								},
+								{
+									"key": "stock",
+									"value": "12",
+									"type": "text"
+								},
+								{
+									"key": "vendor_id",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "category_id",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "subcategory_id",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "videos",
+									"type": "file",
+									"src": "/C:/Users/Abel/Videos/dsf.mp4"
+								},
+								{
+									"key": "specs",
+									"value": "[\n  { \"key\": \"Material\", \"value\": \"100% Cotton\" },\n  { \"key\": \"Color\", \"value\": \"Midnight Blue\" },\n  { \"key\": \"Size\", \"value\": \"Large\" },\n  { \"key\": \"Pattern\", \"value\": \"Plaid\" },\n  { \"key\": \"Fit\", \"value\": \"Slim Fit\" },\n  { \"key\": \"Neckline\", \"value\": \"V-Neck\" },\n  { \"key\": \"Sleeve Length\", \"value\": \"Full Sleeve\" },\n  { \"key\": \"Care Instructions\", \"value\": \"Machine Wash Cold\" },\n  { \"key\": \"Country of Origin\", \"value\": \"Italy\" },\n  { \"key\": \"Season\", \"value\": \"Spring/Summer\" }\n]\n",
+									"type": "text"
+								}
+							]
+						},
+						"url": "{{base_url}}/products/"
+					},
+					"response": []
+				},
+				{
+					"name": "New Request",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Wallet",
+			"item": [
+				{
+					"name": "Get wallet amount",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "images",
+									"type": "file",
+									"src": [
+										"/C:/Users/Abel/Pictures/Screenshot 2025-06-09 135845.png",
+										"/C:/Users/Abel/Pictures/Screenshot 2025-06-12 181009.png"
+									]
+								},
+								{
+									"key": "name",
+									"value": "libs",
+									"type": "text"
+								},
+								{
+									"key": "stock",
+									"value": "12",
+									"type": "text"
+								},
+								{
+									"key": "vendor_id",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "category_id",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "subcategory_id",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "videos",
+									"type": "file",
+									"src": "/C:/Users/Abel/Videos/dsf.mp4"
+								},
+								{
+									"key": "specs",
+									"value": "[\n  { \"key\": \"Material\", \"value\": \"100% Cotton\" },\n  { \"key\": \"Color\", \"value\": \"Midnight Blue\" },\n  { \"key\": \"Size\", \"value\": \"Large\" },\n  { \"key\": \"Pattern\", \"value\": \"Plaid\" },\n  { \"key\": \"Fit\", \"value\": \"Slim Fit\" },\n  { \"key\": \"Neckline\", \"value\": \"V-Neck\" },\n  { \"key\": \"Sleeve Length\", \"value\": \"Full Sleeve\" },\n  { \"key\": \"Care Instructions\", \"value\": \"Machine Wash Cold\" },\n  { \"key\": \"Country of Origin\", \"value\": \"Italy\" },\n  { \"key\": \"Season\", \"value\": \"Spring/Summer\" }\n]\n",
+									"type": "text"
+								}
+							]
+						},
+						"url": "{{base_url}}/wallet/3"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transaction",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				},
+				{
+					"name": "Add an amount",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"amount\":239132\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/wallet/4/add-funds"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Cashout",
+			"item": [
+				{
+					"name": "Get All Cashout Requests",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"amount\":239132\r\n}"
+						},
+						"url": "{{base_url}}/cashout-requests"
+					},
+					"response": []
+				},
+				{
+					"name": "Approve Cashout Request",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"amount\":239132\r\n}"
+						},
+						"url": "{{base_url}}/cashout-requests"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Cashout requests",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"amount\":239132\r\n}"
+						},
+						"url": "{{base_url}}/cashout-requests"
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

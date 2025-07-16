@@ -1,0 +1,2 @@
+// video service
+module.exports = {};

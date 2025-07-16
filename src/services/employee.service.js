@@ -1,0 +1,2 @@
+// employee service
+module.exports = {};

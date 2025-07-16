@@ -1,0 +1,2 @@
+// vendor service
+module.exports = {};
