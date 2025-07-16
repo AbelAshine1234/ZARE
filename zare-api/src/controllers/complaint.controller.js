@@ -1,0 +1,2 @@
+// complaint controller
+module.exports = {};

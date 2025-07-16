@@ -1,0 +1,2 @@
+// spec service
+module.exports = {};

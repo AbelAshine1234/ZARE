@@ -1,0 +1,2 @@
+// spec controller
+module.exports = {};

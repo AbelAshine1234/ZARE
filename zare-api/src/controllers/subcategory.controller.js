@@ -1,0 +1,2 @@
+// subcategory controller
+module.exports = {};

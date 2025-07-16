@@ -1,0 +1,2 @@
+// subscription service
+module.exports = {};

@@ -1,0 +1,2 @@
+// image service
+module.exports = {};

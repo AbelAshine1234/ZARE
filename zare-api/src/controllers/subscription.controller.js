@@ -1,0 +1,2 @@
+// subscription controller
+module.exports = {};

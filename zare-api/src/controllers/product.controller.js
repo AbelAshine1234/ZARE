@@ -1,0 +1,2 @@
+// product controller
+module.exports = {};

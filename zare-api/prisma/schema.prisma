@@ -1,0 +1,601 @@
+// Fixed Prisma schema with unique constraints for 1:1 relations
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserType {
+  client
+  vendor_owner
+  driver
+  admin
+  employee
+}
+
+enum VendorType {
+  individual
+  business
+}
+
+enum DriverStatus {
+  available
+  on_delivery
+  offline
+}
+
+enum DeliveryStatus {
+  not_assigned
+  assigned
+  out_for_delivery
+  delivered
+}
+
+enum PaymentMethodType {
+  wallet
+  external
+  cod
+}
+
+enum OrderStatus {
+  new
+  processing
+  completed
+}
+
+enum ComplaintStatus {
+  pending
+  resolved
+  refunded
+}
+
+enum RefundStatus {
+  pending
+  completed
+  failed
+}
+
+enum CashOutRequestStatus {
+  pending
+  approved
+  rejected
+}
+
+enum TransactionType {
+  credit
+  debit
+}
+
+enum RatingEntityType {
+  product
+  vendor
+}
+
+model User {
+  id               Int             @id @default(autoincrement())
+  name             String?
+  phone_number     String          @unique
+  email            String?
+  picture          String?
+  type             UserType
+  is_verified      Boolean         @default(false)
+  isotpVerified    Boolean         @default(false) @map("is_otp_verified")
+  payment_method   PaymentMethod?  @relation(fields: [payment_method_id], references: [id])
+  payment_method_id Int?
+  created_at       DateTime        @default(now()) @map("created_at")
+  password         String          // <-- Added password field
+  client          Client?
+  vendor          Vendor?
+  driver          Driver?
+  employee        Employee?
+  wishlists       Wishlist[]       @relation("UserWishlists")
+  adInterests     AdsYouMightBeInterestedIn[] @relation("UserAdInterests")
+  searchHistories SearchHistory[]  @relation("UserSearchHistories")
+  notifications   Notification[]   @relation("UserNotifications")
+  senderChats     Chat[]           @relation("ChatSender")
+  receiverChats   Chat[]           @relation("ChatReceiver")
+  issuedComplaints Complaint[]      @relation("ComplaintIssuer")
+  receivedComplaints Complaint[]    @relation("ComplaintReceiver")
+  processedRefunds Refund[]         @relation("ProcessedRefunds")
+  wallet          Wallet?
+  cashOutRequests CashOutRequest[] @relation("UserCashOutRequests")
+  paymentMethods  PaymentMethod[] @relation("UserPaymentMethods")
+  
+  @@map("user")
+  DeliveryStatusLog DeliveryStatusLog[]
+}
+
+model Vendor {
+  id                      Int               @id @default(autoincrement())
+  type                    VendorType
+  cover_image             Image?            @relation("VendorCoverImage", fields: [cover_image_id], references: [id])
+  cover_image_id          Int?              @unique
+  description             String?
+  fayda_image             Image?            @relation("VendorFaydaImage", fields: [fayda_image_id], references: [id])
+  fayda_image_id          Int?              @unique
+  business_license_image  Image?            @relation("VendorBusinessLicenseImage", fields: [business_license_image_id], references: [id])
+  business_license_image_id Int?            @unique
+  rating                  Rating?
+  rating_id               Int?              @unique
+  status      Boolean?          @default(true) // Indicates if the vendor is active
+  
+  // Relations
+  user_id                 Int               @unique
+  user                   User              @relation(fields: [user_id], references: [id])
+  products               Product[]         @relation("VendorProducts")
+  vendorCategories       VendorCategory[]  @relation("VendorCategories")
+  orders                 Order[]           @relation("VendorOrders")
+  paymentMethods         PaymentMethod[]   @relation("VendorPaymentMethods")
+  employees              Employee[]        @relation("VendorEmployees")
+  subscription           Subscription?     @relation("VendorSubscription")
+  cashOutRequests        CashOutRequest[]  @relation("VendorCashOutRequests")
+  
+  @@map("vendor")
+}
+
+model Client {
+  id              Int       @id @default(autoincrement())
+  user_id         Int       @unique
+  user            User      @relation(fields: [user_id], references: [id])
+  wallet_id       Int?      @unique
+  wallet          Wallet?   @relation(fields: [wallet_id], references: [id])
+  orders          Order[]   @relation("ClientOrders")
+  image           Image?  @relation("ClientImage", fields: [image_id], references: [id])
+  image_id        Int?    @unique
+
+  
+  @@map("client")
+}
+
+model Driver {
+  id                  Int           @id @default(autoincrement())
+  vehicle_info        String?
+  current_status      DriverStatus
+  license_image       Image?        @relation("DriverLicenseImage", fields: [license_image_id], references: [id])
+  license_image_id    Int?          @unique
+  fayda_image         Image?        @relation("DriverFaydaImage", fields: [fayda_image_id], references: [id])
+  fayda_image_id      Int?          @unique
+  document_image      Image?        @relation("DriverDocumentImage", fields: [document_image_id], references: [id])
+  document_image_id   Int?          @unique
+  
+  // Relations
+  user_id             Int           @unique
+  user               User          @relation(fields: [user_id], references: [id])
+  wallet_id           Int?          @unique
+  wallet             Wallet?       @relation(fields: [wallet_id], references: [id])
+  deliveries         Delivery[]    @relation("DriverDeliveries")
+  
+  @@map("driver")
+}
+
+model Wishlist {
+  id              Int             @id @default(autoincrement())
+  created_at      DateTime        @default(now())
+  updated_at      DateTime        @updatedAt
+  
+  // Relations
+  user_id         Int
+  user           User            @relation("UserWishlists", fields: [user_id], references: [id])
+  items          WishlistItem[]  @relation("WishlistItems")
+  
+  @@map("wishlist")
+}
+
+model WishlistItem {
+  id              Int       @id @default(autoincrement())
+  added_at        DateTime  @default(now())
+  
+  // Relations
+  wishlist_id     Int
+  wishlist       Wishlist  @relation("WishlistItems", fields: [wishlist_id], references: [id])
+  product_id      Int
+  product        Product   @relation(fields: [product_id], references: [id])
+  
+  @@map("wishlist_item")
+  Product Product[] @relation("ProductWishlistItems")
+}
+
+model AdsYouMightBeInterestedIn {
+  id              Int       @id @default(autoincrement())
+  ad_content      String
+  shown_at        DateTime  @default(now())
+  clicked         Boolean   @default(false)
+  clicked_at      DateTime?
+  
+  // Relations
+  user_id         Int
+  user           User      @relation("UserAdInterests", fields: [user_id], references: [id])
+  product_id      Int?
+  product        Product?  @relation(fields: [product_id], references: [id])
+  
+  @@map("adsyoumightbeinterestedin")
+}
+
+model SearchHistory {
+  id              Int       @id @default(autoincrement())
+  search_query    String
+  searched_at     DateTime  @default(now())
+  
+  // Relations
+  user_id         Int
+  user           User      @relation("UserSearchHistories", fields: [user_id], references: [id])
+  product_id      Int?
+  product        Product?  @relation(fields: [product_id], references: [id])
+  
+  @@map("search_history")
+}
+
+model Product {
+  id              Int       @id @default(autoincrement())
+  name            String
+  description     String?
+  has_discount    Boolean   @default(false)
+  stock           Int
+  created_at      DateTime  @default(now())
+  
+  // Relations
+  vendor_id       Int
+  vendor         Vendor    @relation("VendorProducts", fields: [vendor_id], references: [id])
+  category_id     Int
+  category       Category  @relation(fields: [category_id], references: [id])
+  subcategory_id  Int
+  subcategory    Subcategory @relation(fields: [subcategory_id], references: [id])
+  rating_id       Int?      @unique
+  rating         Rating?
+  images         Image[]   @relation("ProductImages")
+  videos         Video[]   @relation("ProductVideos")
+  specs          Spec[]    @relation("ProductSpecs")
+  orders         Order[]   @relation("ProductOrders")
+  wishlistItems  WishlistItem[] @relation("ProductWishlistItems")
+  
+  @@map("product")
+  Subcategory Subcategory[] @relation("SubcategoryProducts")
+  Category Category[] @relation("CategoryProducts")
+  SearchHistory SearchHistory[]
+  AdsYouMightBeInterestedIn AdsYouMightBeInterestedIn[]
+  WishlistItem WishlistItem[]
+}
+
+model Image {
+  id              Int         @id @default(autoincrement())
+  image_url       String
+  created_at      DateTime    @default(now())
+  
+  // Relations
+  category_id     Int?
+  category       Category?   @relation(fields: [category_id], references: [id], name: "CategoryImages")
+  
+  subcategory_id  Int?
+  subcategory     Subcategory? @relation(fields: [subcategory_id], references: [id])
+  
+  product_id      Int?
+  product        Product?    @relation("ProductImages", fields: [product_id], references: [id])
+  
+  clientImage     Client? @relation("ClientImage")
+
+  // Vendor images
+  vendorCoverImage Vendor?    @relation("VendorCoverImage")
+  vendorFaydaImage Vendor?    @relation("VendorFaydaImage")
+  vendorBusinessLicenseImage Vendor? @relation("VendorBusinessLicenseImage")
+
+  // Driver images
+  driverLicenseImage Driver?  @relation("DriverLicenseImage")
+  driverFaydaImage Driver?    @relation("DriverFaydaImage")
+  driverDocumentImage Driver? @relation("DriverDocumentImage")
+  
+  @@map("image")
+
+  Subcategory Subcategory[] @relation("SubcategoryImages")
+}
+
+
+model Video {
+  id              Int         @id @default(autoincrement())
+  video_url       String
+  created_at      DateTime    @default(now())
+  
+  // Relations
+  category_id     Int?
+  category       Category?   @relation(fields: [category_id], references: [id])
+  subcategory_id  Int?
+  subcategory    Subcategory? @relation(fields: [subcategory_id], references: [id])
+  product_id      Int?
+  product        Product?    @relation("ProductVideos", fields: [product_id], references: [id])
+  
+  @@map("video")
+  Subcategory Subcategory[] @relation("SubcategoryVideos")
+  Category Category[] @relation("CategoryVideos")
+}
+
+model Spec {
+  id              Int       @id @default(autoincrement())
+  key             String
+  value           String
+  
+  // Relations
+  product_id      Int
+  product        Product   @relation("ProductSpecs", fields: [product_id], references: [id])
+  
+  @@map("spec")
+}
+
+model Rating {
+  id              Int       @id @default(autoincrement())
+  entity_type     RatingEntityType
+  entity_id       Int @unique
+  total_ratings   Int       @default(0)
+  sum_ratings     Float     @default(0.0)
+  average_rating  Float     @default(0.0)
+  
+  // Relations (polymorphic)
+  vendor          Vendor?   @relation(fields: [entity_id], references: [id], map: "rating_entity_id_vendor_fkey")
+  product         Product?  @relation(fields: [entity_id], references: [id], map: "rating_entity_id_product_fkey")
+  delivery        Delivery? @relation(fields: [entity_id], references: [id], map: "rating_entity_id_delivery_fkey")
+  
+  @@map("rating")
+}
+
+model Order {
+  id              Int         @id @default(autoincrement()) 
+  quantity        Int
+  unit_price      Float
+  total_amount    Float
+  payment_method  PaymentMethodType
+  payment_id      Int?
+  status          OrderStatus @default(new)
+  created_at      DateTime    @default(now())
+  
+  // Relations
+  client_id       Int
+  client         Client      @relation("ClientOrders", fields: [client_id], references: [id])
+  vendor_id       Int
+  vendor         Vendor      @relation("VendorOrders", fields: [vendor_id], references: [id])
+  product_id      Int
+  product        Product     @relation("ProductOrders", fields: [product_id], references: [id])
+  delivery        Delivery?   @relation("OrderDelivery")
+  complaint       Complaint?  @relation("OrderComplaint")
+  
+  @@map("order")
+  Refund Refund[]
+}
+
+model Delivery {
+  id                  Int             @id @default(autoincrement())
+  qr_code             String?
+  delivery_status     DeliveryStatus  @default(not_assigned)
+  delivered_at        DateTime?
+  client_confirmed    Boolean         @default(false)
+  tip_amount          Float           @default(0.0)
+  
+  // Relations
+  order_id            Int             @unique
+  order              Order           @relation("OrderDelivery", fields: [order_id], references: [id])
+  driver_id           Int
+  driver             Driver          @relation("DriverDeliveries", fields: [driver_id], references: [id])
+  rating_id           Int?            @unique
+  rating             Rating?
+  statusLogs         DeliveryStatusLog[] @relation("DeliveryStatusLogs")
+  
+  @@map("delivery")
+}
+
+model DeliveryStatusLog {
+  id              Int       @id @default(autoincrement())
+  status          String
+  updated_at      DateTime  @default(now())
+  note            String?
+  
+  // Relations
+  delivery_id     Int
+  delivery       Delivery  @relation("DeliveryStatusLogs", fields: [delivery_id], references: [id])
+  updated_by_id   Int
+  updated_by     User      @relation(fields: [updated_by_id], references: [id])
+  
+  @@map("delivery_status_log")
+}
+
+model Chat {
+  id              Int       @id @default(autoincrement())
+  message         String
+  sent_at         DateTime  @default(now())
+  read_at         DateTime?
+  
+  // Relations
+  sender_id       Int
+  sender         User      @relation("ChatSender", fields: [sender_id], references: [id])
+  receiver_id     Int
+  receiver       User      @relation("ChatReceiver", fields: [receiver_id], references: [id])
+  
+  @@map("chat")
+}
+
+model Notification {
+  id              Int       @id @default(autoincrement())
+  type            String
+  title           String
+  message         String
+  is_read         Boolean   @default(false)
+  created_at      DateTime  @default(now())
+  
+  // Relations
+  user_id         Int
+  user           User      @relation("UserNotifications", fields: [user_id], references: [id])
+  
+  @@map("notification")
+}
+
+model Complaint {
+  id              Int             @id @default(autoincrement())
+  description     String
+  file_url        String?
+  status          ComplaintStatus @default(pending)
+  
+  // Relations
+  order_id        Int             @unique
+  order          Order           @relation("OrderComplaint", fields: [order_id], references: [id])
+  issued_by_id    Int
+  issued_by      User            @relation("ComplaintIssuer", fields: [issued_by_id], references: [id])
+  issued_to_id    Int
+  issued_to      User            @relation("ComplaintReceiver", fields: [issued_to_id], references: [id])
+  refund          Refund?         @relation("ComplaintRefund")
+  
+  @@map("complaint")
+}
+
+model Refund {
+  id              Int           @id @default(autoincrement())
+  amount          Float
+  issued_at       DateTime      @default(now())
+  status          RefundStatus  @default(pending)
+  
+  // Relations
+  complaint_id    Int           @unique
+  complaint      Complaint     @relation("ComplaintRefund", fields: [complaint_id], references: [id])
+  order_id        Int
+  order          Order         @relation(fields: [order_id], references: [id])
+  processed_by_id Int
+  processed_by   User          @relation("ProcessedRefunds", fields: [processed_by_id], references: [id])
+  
+  @@map("refund")
+}
+
+model Wallet {
+  id              Int           @id @default(autoincrement())
+  balance         Float         @default(0.0)
+  
+  // Relations
+  user_id         Int           @unique
+  user           User          @relation(fields: [user_id], references: [id])
+  transactions    Transaction[] @relation("WalletTransactions")
+  
+  @@map("wallet")
+  Driver Driver[]
+  Client Client[]
+}
+
+model Transaction {
+  id              Int             @id @default(autoincrement())
+  type            TransactionType
+  amount          Float
+  reason          String?
+  created_at      DateTime        @default(now())
+  
+  // Relations
+  wallet_id       Int
+  wallet         Wallet          @relation("WalletTransactions", fields: [wallet_id], references: [id])
+  
+  @@map("transaction")
+}
+
+model CashOutRequest {
+  id              Int                     @id @default(autoincrement())
+  amount          Float
+  status          CashOutRequestStatus    @default(pending)
+  reason          String?
+  created_at      DateTime                @default(now())
+  
+  // Relations
+  vendor_id       Int
+  vendor         Vendor                  @relation("VendorCashOutRequests", fields: [vendor_id], references: [id])
+  user_id         Int
+  user           User                    @relation("UserCashOutRequests", fields: [user_id], references: [id])
+  
+  @@map("cash_out_request")
+}
+
+model Category {
+  id              Int           @id @default(autoincrement())
+  name            String        @unique
+  description     String?
+  created_at      DateTime      @default(now())
+  
+  // Relations
+  subcategories   Subcategory[] @relation("CategorySubcategories")
+  images      Image[]  @relation("CategoryImages") 
+  videos          Video[]       @relation("CategoryVideos")
+  products        Product[]     @relation("CategoryProducts")
+  vendorCategories VendorCategory[] @relation("CategoryVendorCategories")
+  
+  @@map("category")
+  Video Video[]
+  Product Product[]
+
+}
+
+model Subcategory {
+  id              Int         @id @default(autoincrement())
+  name            String
+  created_at      DateTime    @default(now())
+  
+  // Relations
+  category_id     Int
+  category       Category    @relation("CategorySubcategories", fields: [category_id], references: [id])
+  images          Image[]     @relation("SubcategoryImages")
+  videos          Video[]     @relation("SubcategoryVideos")
+  products        Product[]   @relation("SubcategoryProducts")
+  
+  @@map("subcategory")
+  Video Video[]
+  Image Image[]
+  Product Product[]
+}
+
+model PaymentMethod {
+  id              Int         @id @default(autoincrement())
+  name            String
+  account_number  String
+  account_holder  String
+  type            String?
+  details         Json?
+  created_at      DateTime    @default(now())
+  
+  // Relations
+  vendor_id       Int?
+  vendor         Vendor?     @relation("VendorPaymentMethods", fields: [vendor_id], references: [id])
+  users           User[]      @relation("UserPaymentMethods")
+  
+  @@map("payment_method")
+  User User[]
+}
+
+model Employee {
+  id              Int       @id @default(autoincrement())
+  role            String
+  
+  // Relations
+  vendor_id       Int
+  vendor         Vendor    @relation("VendorEmployees", fields: [vendor_id], references: [id])
+  user_id         Int       @unique
+  user           User      @relation(fields: [user_id], references: [id])
+  
+  @@map("employee")
+}
+
+model Subscription {
+  id              Int       @id @default(autoincrement())
+  plan            String
+  start_date      DateTime
+  end_date        DateTime
+  status          String
+  
+  // Relations
+  vendor_id       Int       @unique
+  vendor         Vendor    @relation("VendorSubscription", fields: [vendor_id], references: [id])
+  
+  @@map("subscription")
+}
+
+model VendorCategory {
+  id              Int       @id @default(autoincrement())
+  
+  // Relations
+  vendor_id       Int
+  vendor         Vendor    @relation("VendorCategories", fields: [vendor_id], references: [id])
+  category_id     Int
+  category       Category  @relation("CategoryVendorCategories", fields: [category_id], references: [id])
+  
+  @@map("vendor_category")
+}

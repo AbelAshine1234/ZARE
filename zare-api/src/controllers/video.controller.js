@@ -1,0 +1,2 @@
+// video controller
+module.exports = {};

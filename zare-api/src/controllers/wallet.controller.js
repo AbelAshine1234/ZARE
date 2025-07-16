@@ -1,0 +1,2 @@
+// wallet controller
+module.exports = {};

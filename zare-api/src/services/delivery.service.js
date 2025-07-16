@@ -1,0 +1,2 @@
+// delivery service
+module.exports = {};

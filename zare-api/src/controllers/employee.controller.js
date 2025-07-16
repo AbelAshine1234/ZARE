@@ -1,0 +1,2 @@
+// employee controller
+module.exports = {};

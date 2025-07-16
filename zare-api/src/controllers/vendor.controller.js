@@ -1,0 +1,2 @@
+// vendor controller
+module.exports = {};

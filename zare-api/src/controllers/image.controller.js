@@ -1,0 +1,2 @@
+// image controller
+module.exports = {};

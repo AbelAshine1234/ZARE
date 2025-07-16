@@ -1,0 +1,2 @@
+// rating controller
+module.exports = {};
