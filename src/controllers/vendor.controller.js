@@ -29,6 +29,9 @@ const createVendor = async (req, res, type, imageFields) => {
     const userExists = await prisma.user.findUnique({ where: { id: user_id } });
     if (!userExists) return res.status(404).json({ error: `User with id ${user_id} does not exist.` });
 
+    const userType = userExists.type;
+    if (userType !== "vendor_owner") return res.status(400).json({ error: "User is not a vendor owner." });
+
     const existingVendor = await prisma.vendor.findUnique({ where: { user_id } });
     if (existingVendor) return res.status(400).json({ error: "This user already has a vendor." });
 

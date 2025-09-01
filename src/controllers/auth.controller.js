@@ -118,6 +118,86 @@ const registerAsClient = async (req, res) => {
   }
 };
 
+// Register a new vendor owner user
+const registerVendorOwner = async (req, res) => {
+  try {
+    const { name, phone_number, email, password, type = "vendor_owner" } = req.body;
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { phone_number },
+          ...(email ? [{ email }] : [])
+        ]
+      },
+    });
+
+    if (existingUser) {
+      return res.status(409).json({
+        error: "User with this phone number or email already exists.",
+      });
+    }
+
+    // Send OTP before creating any records
+    try {
+      const { sendOtp } = require("../utils/otp.util");
+      await sendOtp(phone_number, 'sms');
+    } catch (otpErr) {
+      return res.status(502).json({ error: "Failed to send OTP. Please try again." });
+    }
+
+    // Upload image if available (after OTP successfully sent)
+    const pictureFile = req.files?.find(file => file.fieldname === "picture");
+    let imageRecord = null;
+
+    if (pictureFile) {
+      const imageUrl = await uploadImageToCloudinary(
+        pictureFile.buffer,
+        `${phone_number}_profile`
+      );
+      imageRecord = await prisma.image.create({
+        data: { image_url: imageUrl },
+      });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create user
+    const newUser = await prisma.user.create({
+      data: {
+        name,
+        phone_number,
+        email,
+        password: hashedPassword,
+        type,
+      },
+    });
+
+    // Create wallet for vendor owner
+    const wallet = await prisma.wallet.create({
+      data: {
+        user_id: newUser.id,
+        balance: 0.0,
+        status: 'active'
+      }
+    });
+
+    return res.status(201).json({
+      message: "Vendor owner registered successfully. OTP has been sent.",
+      user: {
+        ...newUser,
+        imageUrl: imageRecord?.image_url || null,
+        wallet: { id: wallet.id, balance: wallet.balance },
+      }
+    });
+    
+  } catch (error) {
+    console.error("Register vendor error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
 
 // Register a new driver user
 const registerAsDriver = async (req, res) => {
@@ -421,4 +501,4 @@ const verifyOtp = async (req, res) => {
   }
 };
 
-module.exports = { registerAsClient, login,registerAsAdmin,registerAsDriver, verifyOtp };
+module.exports = { registerAsClient, login, registerAsAdmin, registerAsDriver, registerVendorOwner, verifyOtp };
