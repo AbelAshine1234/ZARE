@@ -30,10 +30,20 @@ const createVendor = async (req, res, type, imageFields) => {
     if (!userExists) return res.status(404).json({ error: `User with id ${user_id} does not exist.` });
 
     const userType = userExists.type;
-    if (userType !== "vendor_owner") return res.status(400).json({ error: "User is not a vendor owner." });
+    if (userType !== "vendor_owner" && userType !== "employee") {
+      return res.status(400).json({ error: "User is not a vendor owner or employee." });
+    }
 
+    // Both vendor_owner and employee can create vendors
+    // Check if user already has a vendor
     const existingVendor = await prisma.vendor.findUnique({ where: { user_id } });
-    if (existingVendor) return res.status(400).json({ error: "This user already has a vendor." });
+    if (existingVendor) {
+      return res.status(400).json({ 
+        error: userType === "vendor_owner" 
+          ? "This vendor owner already has a vendor." 
+          : "This employee is already associated with a vendor." 
+      });
+    }
 
     const subscriptionExists = await prisma.subscription.findUnique({ where: { id: subscription_id } });
     if (!subscriptionExists) return res.status(400).json({ error: `Subscription with id ${subscription_id} does not exist.` });

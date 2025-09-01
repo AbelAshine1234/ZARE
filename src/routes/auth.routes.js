@@ -43,6 +43,15 @@ router.post(
 );
 
 router.post(
+  '/register-employee',
+  upload.any(),                   // accepts any files in req.files[]
+  rootValidation,
+  validateFileExists('picture'), // check file presence
+  validateBody(clientRegisterSchema), // using same schema for now
+  authController.registerAsEmployee
+);
+
+router.post(
   '/register-driver',
   upload.fields([
     { name: 'profile_image', maxCount: 1 },
