@@ -18,12 +18,19 @@ const uploadImages = async (files, fields) => {
 // Generic vendor creation
 const createVendor = async (req, res, type, imageFields) => {
   try {
-    let { name, user_id, description, category_ids, payment_method, subscription_id } = req.body;
+    let { name, description, category_ids, payment_method, subscription_id } = req.body;
 
-    user_id = Number(user_id);
+    const requester = req.user; // { id, type }
+    const user_id = requester?.id;
+
     subscription_id = Number(subscription_id);
 
-    if (isNaN(user_id)) return res.status(400).json({ error: "Invalid user ID" });
+    if (!Number.isInteger(user_id)) return res.status(403).json({ error: "Unauthorized user." });
+    if (requester.type === 'admin') return res.status(403).json({ error: "Admin cannot create a vendor." });
+    if (requester.type !== 'vendor_owner' && requester.type !== 'employee') {
+      return res.status(403).json({ error: "Only vendor owners or employees can create vendors." });
+    }
+
     if (isNaN(subscription_id)) return res.status(400).json({ error: "Invalid subscription ID" });
 
     const userExists = await prisma.user.findUnique({ where: { id: user_id } });
@@ -67,6 +74,12 @@ const createVendor = async (req, res, type, imageFields) => {
       }
     }
 
+    // Check duplicate vendor name (case-sensitive as per DB). Adjust if needed
+    const existingByName = await prisma.vendor.findUnique({ where: { name } });
+    if (existingByName) {
+      return res.status(409).json({ error: "Vendor name already exists. Choose a different name." });
+    }
+
     const uploadedImages = await uploadImages(req.files, imageFields);
 
     // Create vendor
@@ -75,6 +88,7 @@ const createVendor = async (req, res, type, imageFields) => {
         name,
         type, // <-- ensures "business" or "individual" is set correctly
         description,
+        is_approved: false,
         vendorCategories: category_ids?.length
           ? { create: category_ids.map(id => ({ category: { connect: { id } } })) }
           : undefined,
@@ -134,13 +148,18 @@ const createVendor = async (req, res, type, imageFields) => {
       fayda_image: updatedVendor.fayda_image ? { image_url: updatedVendor.fayda_image.image_url } : null,
       business_license_image: updatedVendor.business_license_image ? { image_url: updatedVendor.business_license_image.image_url } : null,
       wallet: updatedVendor.wallet ? { id: updatedVendor.wallet.id, balance: updatedVendor.wallet.balance } : { id: null, balance: 0 },
-      price: updatedVendor.subscription ? updatedVendor.subscription.amount : 0
+      price: updatedVendor.subscription ? updatedVendor.subscription.amount : 0,
+      isApproved: updatedVendor.is_approved === true
     };
 
     return res.status(201).json({ message: "Vendor created successfully", vendor: cleanVendor });
 
   } catch (error) {
     console.error("Error creating vendor:", error);
+    // Prisma unique constraint
+    if (error.code === 'P2002' && Array.isArray(error.meta?.target) && error.meta.target.includes('name')) {
+      return res.status(409).json({ error: "Vendor name already exists. Choose a different name." });
+    }
     return res.status(500).json({ message: "Failed to create vendor", error: error.message });
   }
 };
@@ -168,6 +187,7 @@ const getAllVendors = async (req, res) => {
       name: vendor.name,
       type: vendor.type,
       description: vendor.description,
+      isApproved: vendor.is_approved === true,
       cover_image: vendor.cover_image ? { image_url: vendor.cover_image.image_url } : null,
       fayda_image: vendor.fayda_image ? { image_url: vendor.fayda_image.image_url } : null,
       business_license_image: vendor.business_license_image ? { image_url: vendor.business_license_image.image_url } : null,
@@ -194,3 +214,109 @@ const getAllVendors = async (req, res) => {
  
 
 module.exports = { createIndividualVendor, createBusinessVendor,getAllVendors };
+// Toggle vendor active status (only vendor_owner or employee on their own vendor)
+const updateVendorStatus = async (req, res) => {
+  try {
+    const { status } = req.body || {};
+    if (status === undefined) {
+      return res.status(400).json({ error: 'status is required' });
+    }
+    if (typeof status !== 'boolean') {
+      return res.status(400).json({ error: "'status' must be boolean" });
+    }
+
+    const requester = req.user; // { id, type }
+
+    let targetVendorId = null;
+
+    console.log("status", status);
+    if (requester.type === 'vendor_owner') {
+      // Find vendor by vendor owner's user id
+      const vendor = await prisma.vendor.findUnique({ where: { user_id: requester.id } });
+      if (!vendor) return res.status(404).json({ error: 'Vendor not found for this user.' });
+      targetVendorId = vendor.id;
+    } else if (requester.type === 'employee') {
+      // Find employee then vendor
+      const employee = await prisma.employee.findUnique({ where: { user_id: requester.id }, include: { vendor: true } });
+      if (!employee?.vendor) return res.status(404).json({ error: 'Employee is not associated with a vendor.' });
+      targetVendorId = employee.vendor.id;
+    } else {
+      return res.status(403).json({ error: 'Only vendor owners or employees can change vendor status.' });
+    }
+
+    const updated = await prisma.vendor.update({
+      where: { id: targetVendorId },
+      data: { status },
+      select: { id: true, status: true }
+    });
+
+    return res.status(200).json({ message: 'Vendor status updated', vendor: updated });
+  } catch (error) {
+    console.error('Error updating vendor status:', error);
+    return res.status(500).json({ error: 'Failed to update status' });
+  }
+};
+
+// Update vendor approval flag (admin only)
+const updateVendorApproval = async (req, res) => {
+  try {
+    const { vendor_id, isApproved } = req.body;
+    const idNum = Number(vendor_id);
+    if (!Number.isInteger(idNum)) return res.status(400).json({ error: 'Invalid vendor_id' });
+    if (typeof isApproved !== 'boolean') return res.status(400).json({ error: "'isApproved' must be boolean" });
+
+    const updated = await prisma.vendor.update({
+      where: { id: idNum },
+      data: { is_approved: isApproved },
+      select: { id: true, is_approved: true }
+    });
+
+    return res.status(200).json({ message: 'Vendor approval updated', vendor: { id: updated.id, isApproved: updated.is_approved === true } });
+  } catch (error) {
+    console.error('Error updating vendor approval:', error);
+    if (error.code === 'P2025') return res.status(404).json({ error: 'Vendor not found' });
+    return res.status(500).json({ error: 'Failed to update approval' });
+  }
+};
+
+// Delete vendor (admin can delete any by id; vendor/employee can delete their own)
+// Note: performs a soft delete by setting status=false to avoid FK constraint issues.
+const deleteVendor = async (req, res) => {
+  try {
+    const requester = req.user; // { id, type }
+    let targetVendorId = null;
+
+    if (requester.type === 'admin') {
+      const idNum = Number(req.params.id || req.body.vendor_id);
+      if (!Number.isInteger(idNum)) return res.status(400).json({ error: 'Invalid vendor id' });
+      targetVendorId = idNum;
+    } else if (requester.type === 'vendor_owner') {
+      const vendor = await prisma.vendor.findUnique({ where: { user_id: requester.id } });
+      if (!vendor) return res.status(404).json({ error: 'Vendor not found for this user.' });
+      targetVendorId = vendor.id;
+    } else if (requester.type === 'employee') {
+      const employee = await prisma.employee.findUnique({ where: { user_id: requester.id }, include: { vendor: true } });
+      if (!employee?.vendor) return res.status(404).json({ error: 'Employee is not associated with a vendor.' });
+      targetVendorId = employee.vendor.id;
+    } else {
+      return res.status(403).json({ error: 'Not authorized to delete vendor.' });
+    }
+
+    // Soft delete: set inactive
+    const updated = await prisma.vendor.update({
+      where: { id: targetVendorId },
+      data: { status: false },
+      select: { id: true, status: true }
+    });
+
+    return res.status(200).json({ message: 'Vendor deleted (soft)', vendor: updated });
+  } catch (error) {
+    console.error('Error deleting vendor:', error);
+    if (error.code === 'P2025') return res.status(404).json({ error: 'Vendor not found' });
+    return res.status(500).json({ error: 'Failed to delete vendor' });
+  }
+};
+
+module.exports.updateVendorStatus = updateVendorStatus;
+module.exports.updateVendorApproval = updateVendorApproval;
+module.exports.deleteVendor = deleteVendor;

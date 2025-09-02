@@ -9,7 +9,7 @@ const jsonFieldsParser = require('../middlewares/jsonFieldsParser');
 const { clientRegisterSchema, loginSchema ,adminRegisterSchema} = require('../schemas/auth.schema');
 const { driverRegistrationSchema } = require('../schemas/driver.schema');
 
-const { verifyOtpSchema } = require('../schemas/auth.schema');
+const { verifyOtpSchema, resendOtpSchema } = require('../schemas/auth.schema');
 
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
@@ -69,5 +69,8 @@ router.post('/login', validateBody(loginSchema), authController.login);
 
 // Verify OTP
 router.post('/verify-otp', validateBody(verifyOtpSchema), authController.verifyOtp);
+
+// Resend OTP
+router.post('/resend-otp', validateBody(resendOtpSchema), authController.resendOtp);
 
 module.exports = router; 

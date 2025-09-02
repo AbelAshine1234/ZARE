@@ -515,9 +515,9 @@ const login = async (req, res) => {
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ error: "Invalid phone number or password." });
     }
-    if(!user.isotpVerified && !user.type=='admin'){
-      // If ther user is admin otp verification is not used
+    if (!user.isotpVerified && user.type !== 'admin') {
       return res.status(401).json({ error: "OTP not verified. Please Verify OTP" });
+      // OTP verification is not required for admin users
     }
 
     const token = jwt.sign(
@@ -582,4 +582,31 @@ const verifyOtp = async (req, res) => {
   }
 };
 
-module.exports = { registerAsClient, login, registerAsAdmin, registerAsDriver, registerVendorOwner, registerAsEmployee, verifyOtp };
+// Resend OTP for a given phone number
+const resendOtp = async (req, res) => {
+  try {
+    const { phone_number, channel = 'sms' } = req.body;
+
+    // Check user existence
+    const user = await prisma.user.findUnique({ where: { phone_number } });
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    // If already verified, no need to resend
+    if (user.isotpVerified || user.is_verified) {
+      return res.status(400).json({ error: "User already verified." });
+    }
+
+    // Send OTP
+    const { sendOtp } = require("../utils/otp.util");
+    await sendOtp(phone_number, channel);
+
+    return res.status(200).json({ message: "OTP resent successfully." });
+  } catch (error) {
+    console.error("Resend OTP error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+module.exports = {resendOtp, registerAsClient, login, registerAsAdmin, registerAsDriver, registerVendorOwner, registerAsEmployee, verifyOtp };

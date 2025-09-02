@@ -90,6 +90,16 @@ const verifyOtpSchema = Joi.object({
   })
 });
 
+// Resend OTP schema
+const resendOtpSchema = Joi.object({
+  phone_number: Joi.string().pattern(/^\+?[0-9]{9,15}$/).required().messages({
+    'string.empty': 'Phone number is required.',
+    'any.required': 'Phone number is required.',
+    'string.pattern.base': 'Phone number must be a valid international format.'
+  }),
+  channel: Joi.string().valid('sms', 'whatsapp').default('sms')
+});
+
 const driverRegisterSchema = Joi.object({
   name: Joi.string().trim().min(2).max(50).required().messages({
     'string.empty': 'Name is required.',
@@ -128,4 +138,4 @@ const driverRegisterSchema = Joi.object({
 });
 
  
-module.exports = { clientRegisterSchema, loginSchema ,adminRegisterSchema, verifyOtpSchema,driverRegisterSchema}; 
+module.exports = { clientRegisterSchema, loginSchema ,adminRegisterSchema, verifyOtpSchema, resendOtpSchema,driverRegisterSchema}; 
