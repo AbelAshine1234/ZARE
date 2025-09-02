@@ -133,7 +133,8 @@ model Vendor {
   business_license_image_id Int?            @unique
   rating                  Rating?
   rating_id               Int?              @unique
-  status      Boolean?          @default(true) // Indicates if the vendor is active
+  status      Boolean?          @default(true) // Indicates if the vendor is active or not like if its under maintenance or not
+  is_approved Boolean?          @default(false) // Indicates if the vendor is approved by the admin or not
   
   subscription_id         Int               // foreign key pointing to subscription
   subscription            Subscription      @relation(fields: [subscription_id], references: [id])

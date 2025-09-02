@@ -2,9 +2,9 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const { rootValidation, validateBody, validateFileExistsObjects } = require('../middlewares/validate');
-const { vendorSchema } = require('../schemas/vendor.schema');
+const { vendorSchema, vendorStatusSchema, vendorApprovalSchema, vendorDeleteSchema } = require('../schemas/vendor.schema');
 const vendorController = require('../controllers/vendor.controller');
-const { authenticate } = require('../middlewares/authMiddleware');
+const { authenticate, authorizeAdmin } = require('../middlewares/authMiddleware');
 const jsonFieldsParser = require('../middlewares/jsonFieldsParser'); // import it
 
 router.use(authenticate);
@@ -42,8 +42,20 @@ router.post(
   vendorController.createBusinessVendor
 );
 
-router.get('/',
+router.get('/', authorizeAdmin,
   vendorController.getAllVendors
 );
+
+// 1) Toggle vendor status (on/off) - only vendor_owner or employee on their own vendor
+router.patch('/status', validateBody(vendorStatusSchema), vendorController.updateVendorStatus);
+
+// 2) Update vendor approval - admin only
+router.patch('/approve', authorizeAdmin, validateBody(vendorApprovalSchema), vendorController.updateVendorApproval);
+
+// 3) Delete vendor
+// - Vendors/Employees delete their own (no id in path)
+router.delete('/', validateBody(vendorDeleteSchema), vendorController.deleteVendor);
+// - Admin delete by id in path
+router.delete('/:id', authorizeAdmin, vendorController.deleteVendor);
 
 module.exports = router;
