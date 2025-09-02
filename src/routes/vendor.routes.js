@@ -17,14 +17,20 @@ router.post(
     { name: 'fayda_image', maxCount: 1 },
   ]),
   rootValidation,
-  validateFileExistsObjects('cover_image'),
-  validateFileExistsObjects('fayda_image'),
+  // validateFileExistsObjects('cover_image'),
+  // validateFileExistsObjects('fayda_image'),
 
   jsonFieldsParser(['category_ids', 'keepImages','payment_method']), 
 
   validateBody(vendorSchema),
   vendorController.createIndividualVendor
 );
+
+// Get current user's vendor status
+router.get('/my-status',
+  vendorController.getUserVendorStatus
+);
+
 
 router.post(
   '/business',

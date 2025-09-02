@@ -4,11 +4,14 @@ const { Pool } = require('pg');
 const multer = require('multer');
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./swagger");
+const cors = require('cors');
 
 // Swagger route
 
 
 const app = express();
+
+app.use(cors()); // Enable CORS for all routes
 
 // PostgreSQL Pool
 const pool = new Pool({

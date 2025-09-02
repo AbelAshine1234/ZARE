@@ -525,7 +525,6 @@ const login = async (req, res) => {
       process.env.SECRET_KEY,
       { expiresIn: "7d" }
     );
-
     return res.status(200).json({
       message: "Login successful",
       token,

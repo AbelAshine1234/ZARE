@@ -29,8 +29,8 @@ router.post(
   '/register-vendor-owner',
   upload.any(),                   // accepts any files in req.files[]
   rootValidation,
-  validateFileExists('picture'), // check file presence
-  validateBody(clientRegisterSchema), // using same schema for now
+  // validateFileExists('picture'), // check file presence
+  // validateBody(clientRegisterSchema), // using same schema for now
   authController.registerVendorOwner
 );
 
