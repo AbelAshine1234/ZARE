@@ -212,8 +212,59 @@ const getAllVendors = async (req, res) => {
 };
 
  
+const getUserVendorStatus = async (req, res) => {
+  try {
+    const requester = req.user; // { id, type }
+    const user_id = requester?.id;
 
-module.exports = { createIndividualVendor, createBusinessVendor,getAllVendors };
+    if (!Number.isInteger(user_id)) {
+      return res.status(403).json({ error: "Unauthorized user." });
+    }
+
+    // Check if user is a vendor_owner or employee
+    if (requester.type !== 'vendor_owner' && requester.type !== 'employee') {
+      return res.status(400).json({ error: "User is not a vendor owner or employee." });
+    }
+
+    // Find vendor for this user
+    const vendor = await prisma.vendor.findUnique({
+      where: { user_id },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        is_approved: true,
+        status: true,
+      }
+    });
+
+    if (!vendor) {
+      return res.status(200).json({ 
+        hasVendor: false,
+        message: "No vendor found for this user"
+      });
+    }
+
+    return res.status(200).json({
+      hasVendor: true,
+      vendor: {
+        id: vendor.id,
+        name: vendor.name,
+        type: vendor.type,
+        isApproved: vendor.is_approved,
+        status: vendor.status,
+        createdAt: vendor.created_at,
+      }
+    });
+
+  } catch (error) {
+    console.error("Error getting user vendor status:", error);
+    return res.status(500).json({ message: "Failed to get vendor status", error: error.message });
+  }
+};
+
+module.exports = { createIndividualVendor, createBusinessVendor, getAllVendors, getUserVendorStatus };
+
 // Toggle vendor active status (only vendor_owner or employee on their own vendor)
 const updateVendorStatus = async (req, res) => {
   try {
