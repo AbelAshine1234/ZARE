@@ -357,7 +357,10 @@ const registerAsDriver = async (req, res) => {
 // We are not sending otp for admin because why?
 const registerAsAdmin = async (req, res) => {
   try {
-    const { name, phone_number, email, password, type = "admin" } = req.body;
+    const { name, phone_number, email, password } = req.body;
+
+    // Force admin type; do NOT register clients here
+    const type = 'admin';
 
     // Check if user already exists
     const existingUser = await prisma.user.findFirst({
@@ -375,24 +378,18 @@ const registerAsAdmin = async (req, res) => {
       });
     }
 
-    // Upload image if available
+    // Optional image upload
     const pictureFile = req.files?.find(file => file.fieldname === "picture");
     let imageRecord = null;
-
     if (pictureFile) {
-      const imageUrl = await uploadImageToCloudinary(
-        pictureFile.buffer,
-        `${phone_number}_profile`
-      );
-      imageRecord = await prisma.image.create({
-        data: { image_url: imageUrl },
-      });
+      const imageUrl = await uploadImageToCloudinary(pictureFile.buffer, `${phone_number}_profile`);
+      imageRecord = await prisma.image.create({ data: { image_url: imageUrl } });
     }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Create admin user
     const newUser = await prisma.user.create({
       data: {
         name,
@@ -403,11 +400,23 @@ const registerAsAdmin = async (req, res) => {
       },
     });
 
+    // Ensure wallet exists for admin
+    const existingWallet = await prisma.wallet.findUnique({ where: { user_id: newUser.id } });
+    if (!existingWallet) {
+      await prisma.wallet.create({
+        data: { user_id: newUser.id, balance: 0 }
+      });
+    }
+
     return res.status(201).json({
-      message: "Client registered successfully. OTP has been sent.",
+      message: 'Admin registered successfully.',
       user: {
-        ...newUser,
-        imageUrl: newUser.image?.image_url || null,
+        id: newUser.id,
+        name: newUser.name,
+        phone_number: newUser.phone_number,
+        email: newUser.email,
+        type: newUser.type,
+        is_verified: newUser.is_verified,
       }
     });
   } catch (error) {
@@ -515,6 +524,7 @@ const login = async (req, res) => {
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ error: "Invalid phone number or password." });
     }
+    console.log("usertype",user.type)
     if (!user.isotpVerified && user.type !== 'admin') {
       return res.status(401).json({ error: "OTP not verified. Please Verify OTP" });
       // OTP verification is not required for admin users
@@ -525,7 +535,6 @@ const login = async (req, res) => {
       process.env.SECRET_KEY,
       { expiresIn: "7d" }
     );
-
     return res.status(200).json({
       message: "Login successful",
       token,
@@ -609,4 +618,37 @@ const resendOtp = async (req, res) => {
   }
 };
 
-module.exports = {resendOtp, registerAsClient, login, registerAsAdmin, registerAsDriver, registerVendorOwner, registerAsEmployee, verifyOtp };
+// Return current authenticated user based on JWT
+const me = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: Number(userId) },
+      select: {
+        id: true,
+        name: true,
+        phone_number: true,
+        email: true,
+        type: true,
+        is_verified: true,
+        isotpVerified: true,
+        created_at: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    return res.status(200).json(user);
+  } catch (error) {
+    console.error('Auth me error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+module.exports = {resendOtp, registerAsClient, login, registerAsAdmin, registerAsDriver, registerVendorOwner, registerAsEmployee, verifyOtp, me };

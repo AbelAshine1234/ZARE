@@ -25,6 +25,41 @@ const createSubcategory = async (req, res) => {
         where: { name, category_id: categoryIdInt },
       });
       if (existingSubcategory) {
+        if (existingSubcategory.status === false) {
+          // Restore soft-deleted subcategory with same name
+          const restored = await prisma.subcategory.update({
+            where: { id: existingSubcategory.id },
+            data: { status: true },
+          });
+
+          // Handle images upload on restore if provided
+          let createdImages = [];
+          if (pictures?.length > 0) {
+            const uploadPromises = pictures.map(async (file) => {
+              const url = await uploadImageToCloudinary(
+                file.buffer,
+                `${restored.id}_subcategory_${file.originalname}`
+              );
+              return prisma.image.create({
+                data: {
+                  image_url: url,
+                  subcategory: { connect: { id: restored.id } },
+                },
+              });
+            });
+            createdImages = await Promise.all(uploadPromises);
+          }
+
+          return res.status(200).json({
+            message: "Subcategory restored successfully",
+            subcategory: {
+              id: restored.id,
+              name: restored.name,
+              category_id: restored.category_id,
+              images: createdImages.map(({ id, image_url, created_at }) => ({ id, image_url, created_at })),
+            },
+          });
+        }
         return res.status(409).json({ error: "Subcategory name already exists under this category." });
       }
   
@@ -74,7 +109,16 @@ const createSubcategory = async (req, res) => {
 const getAllSubcategories = async (req, res) => {
   try {
     const subcategories = await prisma.subcategory.findMany({
-      include: { images: true },
+      where: { status: true },
+      include: { 
+        images: true,
+        category: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      },
       orderBy: { created_at: "desc" },
     });
     return res.status(200).json(subcategories);
@@ -93,7 +137,7 @@ const getSubcategoryById = async (req, res) => {
       where: { id },
       include: { images: true },
     });
-    if (!subcategory) return res.status(404).json({ error: "Subcategory not found" });
+    if (!subcategory || subcategory.status === false) return res.status(404).json({ error: "Subcategory not found" });
 
     return res.json(subcategory);
   } catch (error) {
@@ -214,9 +258,9 @@ const deleteSubcategory = async (req, res) => {
       // Optional: delete images from Cloudinary if public_id stored
     }
 
-    await prisma.subcategory.delete({ where: { id } });
-
-    return res.status(200).json({ message: "Subcategory and related images deleted successfully" });
+    // Soft delete
+    const updated = await prisma.subcategory.update({ where: { id }, data: { status: false }, select: { id: true, status: true } });
+    return res.status(200).json({ message: "Subcategory deleted (soft)", subcategory: updated });
   } catch (error) {
     console.error("Delete subcategory error:", error);
     return res.status(500).json({ error: "Internal server error" });
@@ -229,4 +273,39 @@ module.exports = {
   getSubcategoryById,
   updateSubcategory,
   deleteSubcategory,
+  // Recycle bin operations
+  getDeletedSubcategories: async (req, res) => {
+    try {
+      const subs = await prisma.subcategory.findMany({ where: { status: false }, include: { images: true, category: true } });
+      return res.status(200).json({ subcategories: subs });
+    } catch (e) {
+      console.error('List deleted subcategories error:', e);
+      return res.status(500).json({ error: 'Failed to list deleted subcategories' });
+    }
+  },
+  restoreSubcategory: async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: 'Invalid subcategory ID' });
+      const restored = await prisma.subcategory.update({ where: { id }, data: { status: true }, select: { id: true, status: true } });
+      return res.status(200).json({ message: 'Subcategory restored', subcategory: restored });
+    } catch (e) {
+      console.error('Restore subcategory error:', e);
+      if (e.code === 'P2025') return res.status(404).json({ error: 'Subcategory not found' });
+      return res.status(500).json({ error: 'Failed to restore subcategory' });
+    }
+  },
+  permanentlyDeleteSubcategory: async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: 'Invalid subcategory ID' });
+      await prisma.image.deleteMany({ where: { subcategory_id: id } });
+      const deleted = await prisma.subcategory.delete({ where: { id }, select: { id: true } });
+      return res.status(200).json({ message: 'Subcategory permanently deleted', subcategory: deleted });
+    } catch (e) {
+      console.error('Permanent delete subcategory error:', e);
+      if (e.code === 'P2025') return res.status(404).json({ error: 'Subcategory not found' });
+      return res.status(500).json({ error: 'Failed to permanently delete subcategory' });
+    }
+  },
 };

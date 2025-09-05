@@ -44,6 +44,20 @@ const getSubscriptionById = async (req, res) => {
 
     const subscription = await prisma.subscription.findUnique({
       where: { id },
+      include: {
+        vendors: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone_number: true
+              }
+            }
+          }
+        }
+      }
     });
 
     if (!subscription) {
@@ -103,10 +117,63 @@ const deleteSubscription = async (req, res) => {
   }
 };
 
+const getSubscriptionDetails = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: 'Invalid subscription ID' });
+    }
+
+    const subscription = await prisma.subscription.findUnique({
+      where: { id },
+      include: {
+        vendors: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone_number: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!subscription) {
+      return res.status(404).json({ message: 'Subscription not found' });
+    }
+
+    // Calculate statistics
+    const totalVendors = subscription.vendors.length;
+    const activeVendors = subscription.vendors.filter(v => v.status).length;
+    const approvedVendors = subscription.vendors.filter(v => v.is_approved).length;
+    const totalRevenue = subscription.amount * totalVendors;
+
+    const subscriptionDetails = {
+      ...subscription,
+      statistics: {
+        totalVendors,
+        activeVendors,
+        approvedVendors,
+        totalRevenue
+      }
+    };
+
+    res.json(subscriptionDetails);
+  } catch (error) {
+    console.error('Get subscription details error:', error);
+    res.status(500).json({ message: 'Failed to get subscription details', error: error.message });
+  }
+};
+
 module.exports = {
   createSubscription,
   getAllSubscriptions,
   getSubscriptionById,
+  getSubscriptionDetails,
   updateSubscription,
   deleteSubscription,
 };

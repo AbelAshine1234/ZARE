@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
+const { authenticate } = require('../middlewares/authMiddleware');
 
 const { rootValidation, validateBody, validateFileExistsObjects,validateFileExists } = require('../middlewares/validate');
 const fileValidation = require('../middlewares/fileValidation');
@@ -29,8 +30,8 @@ router.post(
   '/register-vendor-owner',
   upload.any(),                   // accepts any files in req.files[]
   rootValidation,
-  validateFileExists('picture'), // check file presence
-  validateBody(clientRegisterSchema), // using same schema for now
+  // validateFileExists('picture'), // check file presence
+  // validateBody(clientRegisterSchema), // using same schema for now
   authController.registerVendorOwner
 );
 
@@ -72,5 +73,8 @@ router.post('/verify-otp', validateBody(verifyOtpSchema), authController.verifyO
 
 // Resend OTP
 router.post('/resend-otp', validateBody(resendOtpSchema), authController.resendOtp);
+
+// Current user
+router.get('/me', authenticate, authController.me);
 
 module.exports = router; 

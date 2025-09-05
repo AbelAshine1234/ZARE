@@ -14,13 +14,20 @@ import DashboardPage from './pages/dashboard/DashboardPage';
 // User Management Pages
 import UsersPage from './pages/users/UsersPage';
 import VendorsPage from './pages/users/VendorsPage';
+import VendorDetailPage from './pages/users/VendorDetailPage';
+import VendorImagesPage from './pages/users/VendorImagesPage';
+import VendorNotesPage from './pages/users/VendorNotesPage';
+import VendorPaymentMethodsPage from './pages/users/VendorPaymentMethodsPage';
 import DriversPage from './pages/users/DriversPage';
 import EmployeesPage from './pages/users/EmployeesPage';
+import RecycleBinVendorsPage from './pages/users/RecycleBinVendorsPage';
 
 // Product Management Pages
 import ProductsPage from './pages/products/ProductsPage';
 import CategoriesPage from './pages/products/CategoriesPage';
 import SubcategoriesPage from './pages/products/SubcategoriesPage';
+import SubcategoryDetailPage from './pages/products/SubcategoryDetailPage';
+import CategoryDetailPage from './pages/products/CategoryDetailPage';
 
 // Order Management Pages
 import OrdersPage from './pages/orders/OrdersPage';
@@ -28,6 +35,8 @@ import DeliveriesPage from './pages/orders/DeliveriesPage';
 
 // Financial Management Pages
 import WalletsPage from './pages/finance/WalletsPage';
+import WalletDetailPage from './pages/finance/WalletDetailPage';
+import UserWalletDetailPage from './pages/finance/UserWalletDetailPage';
 import TransactionsPage from './pages/finance/TransactionsPage';
 import CashOutRequestsPage from './pages/finance/CashOutRequestsPage';
 import RefundsPage from './pages/finance/RefundsPage';
@@ -39,22 +48,33 @@ import ChatPage from './pages/communication/ChatPage';
 
 // Settings Pages
 import SubscriptionsPage from './pages/settings/SubscriptionsPage';
+import SubscriptionDetailPage from './pages/settings/SubscriptionDetailPage';
 import PaymentMethodsPage from './pages/settings/PaymentMethodsPage';
 
 // Context
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { Provider } from 'react-redux';
+import store from './store';
 
 const theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#1976d2',
+      main: '#2e7d32', // green
+      light: '#60ad5e',
+      dark: '#005005'
     },
     secondary: {
-      main: '#dc004e',
+      main: '#00796b', // teal
+      light: '#48a999',
+      dark: '#004c40'
     },
+    success: { main: '#2e7d32' },
+    warning: { main: '#f9a825' },
+    error: { main: '#c62828' },
+    info: { main: '#0288d1' },
     background: {
-      default: '#f5f5f5',
+      default: '#f4f9f4',
     },
   },
   typography: {
@@ -83,13 +103,20 @@ function AppRoutes() {
         {/* User Management */}
         <Route path="users" element={<UsersPage />} />
         <Route path="vendors" element={<VendorsPage />} />
+        <Route path="vendors/:id" element={<VendorDetailPage />} />
+        <Route path="vendors/:id/notes" element={<VendorNotesPage />} />
+        <Route path="vendors/:id/payment-methods" element={<VendorPaymentMethodsPage />} />
+        <Route path="vendors/:id/images" element={<VendorImagesPage />} />
+        <Route path="recycle-bin" element={<RecycleBinVendorsPage />} />
         <Route path="drivers" element={<DriversPage />} />
         <Route path="employees" element={<EmployeesPage />} />
         
         {/* Product Management */}
         <Route path="products" element={<ProductsPage />} />
         <Route path="categories" element={<CategoriesPage />} />
+        <Route path="categories/:id" element={<CategoryDetailPage />} />
         <Route path="subcategories" element={<SubcategoriesPage />} />
+        <Route path="subcategories/:id" element={<SubcategoryDetailPage />} />
         
         {/* Order Management */}
         <Route path="orders" element={<OrdersPage />} />
@@ -97,6 +124,8 @@ function AppRoutes() {
         
         {/* Financial Management */}
         <Route path="wallets" element={<WalletsPage />} />
+        <Route path="wallets/:id" element={<WalletDetailPage />} />
+        <Route path="user-wallets/:id" element={<UserWalletDetailPage />} />
         <Route path="transactions" element={<TransactionsPage />} />
         <Route path="cashout-requests" element={<CashOutRequestsPage />} />
         <Route path="refunds" element={<RefundsPage />} />
@@ -108,6 +137,7 @@ function AppRoutes() {
         
         {/* Settings */}
         <Route path="subscriptions" element={<SubscriptionsPage />} />
+        <Route path="subscriptions/:id" element={<SubscriptionDetailPage />} />
         <Route path="payment-methods" element={<PaymentMethodsPage />} />
       </Route>
     </Routes>
@@ -118,15 +148,18 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AuthProvider>
-        <Router>
-          <Box sx={{ display: 'flex' }}>
-            <AppRoutes />
-          </Box>
-        </Router>
-      </AuthProvider>
+      <Provider store={store}>
+        <AuthProvider>
+          <Router>
+            <Box sx={{ display: 'flex' }}>
+              <AppRoutes />
+            </Box>
+          </Router>
+        </AuthProvider>
+      </Provider>
     </ThemeProvider>
   );
 }
 
-export default App; 
+export default App;
+

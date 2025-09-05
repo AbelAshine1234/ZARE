@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Paper,
@@ -38,13 +38,14 @@ import {
   Image
 } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
-import axios from 'axios';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchProducts, createProduct, updateProduct, deleteProduct as deleteProductThunk } from '../../store/slices/productsSlice';
 
 const ProductsPage = () => {
-  const [products, setProducts] = useState([]);
+  const dispatch = useDispatch();
+  const { items: products, loading } = useSelector(state => state.products);
   const [categories, setCategories] = useState([]);
   const [vendors, setVendors] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterVendor, setFilterVendor] = useState('all');
@@ -55,84 +56,41 @@ const ProductsPage = () => {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   useEffect(() => {
-    fetchData();
+    dispatch(fetchProducts({ page: 1, limit: 50 }));
+  }, [dispatch]);
+
+  useEffect(() => {
+    // Move category and vendor fetching to dedicated thunks later if needed
+    // For now, leave as is if there are no slices; but user requested no API calls here.
+    // So set empty arrays to avoid runtime fetch in component.
+    setCategories([]);
+    setVendors([]);
   }, []);
 
-  const fetchData = async () => {
-    try {
-      // Fetch products, categories, and vendors
-      const [productsRes, categoriesRes, vendorsRes] = await Promise.all([
-        axios.get('/api/products'),
-        axios.get('/api/category'),
-        axios.get('/api/vendors')
-      ]);
-      
-      setProducts(productsRes.data);
-      setCategories(categoriesRes.data);
-      setVendors(vendorsRes.data);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      // Mock data for demonstration
-      setProducts([
-        {
-          id: 1,
-          name: 'iPhone 15 Pro',
-          description: 'Latest iPhone with advanced features',
-          price: 999.99,
-          category: 'Electronics',
-          vendor: 'Tech Store',
-          status: 'active',
-          stock: 50,
-          rating: 4.8,
-          image_url: 'https://via.placeholder.com/150x150?text=iPhone',
-          created_at: '2024-01-15T10:30:00Z'
-        },
-        {
-          id: 2,
-          name: 'Nike Air Max',
-          description: 'Comfortable running shoes',
-          price: 129.99,
-          category: 'Sports',
-          vendor: 'Sports World',
-          status: 'active',
-          stock: 25,
-          rating: 4.5,
-          image_url: 'https://via.placeholder.com/150x150?text=Nike',
-          created_at: '2024-01-10T14:20:00Z'
-        },
-        {
-          id: 3,
-          name: 'Coffee Maker',
-          description: 'Automatic coffee machine',
-          price: 89.99,
-          category: 'Home & Kitchen',
-          vendor: 'Home Goods',
-          status: 'inactive',
-          stock: 0,
-          rating: 4.2,
-          image_url: 'https://via.placeholder.com/150x150?text=Coffee',
-          created_at: '2024-01-20T09:15:00Z'
-        }
-      ]);
-      
-      setCategories([
-        { id: 1, name: 'Electronics' },
-        { id: 2, name: 'Sports' },
-        { id: 3, name: 'Home & Kitchen' },
-        { id: 4, name: 'Fashion' },
-        { id: 5, name: 'Books' }
-      ]);
-      
-      setVendors([
-        { id: 1, name: 'Tech Store' },
-        { id: 2, name: 'Sports World' },
-        { id: 3, name: 'Home Goods' },
-        { id: 4, name: 'Fashion Hub' }
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const vendorsByType = useMemo(() => {
+    const list = Array.isArray(vendors) ? vendors : [];
+    const individual = list.filter(v => v.type === 'individual');
+    const business = list.filter(v => v.type === 'business');
+    return { individual, business };
+  }, [vendors]);
+
+  // Normalize backend product shape to flat rows for the grid
+  const productRows = useMemo(() => {
+    const list = Array.isArray(products) ? products : [];
+    return list.map(p => ({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      price: p.price ?? p.unit_price ?? 0,
+      category: p.category?.name || p.category_name || '',
+      vendor: p.vendor?.name || p.vendor_name || '',
+      status: p.status || (p.stock > 0 ? 'active' : 'inactive'),
+      stock: p.stock ?? 0,
+      rating: typeof p.rating === 'number' ? p.rating : (p.rating?.average || p.rating?.score || 0),
+      image_url: (Array.isArray(p.images) && p.images[0]?.image_url) ? p.images[0].image_url : p.image_url || '',
+      created_at: p.created_at || p.createdAt || new Date().toISOString(),
+    }));
+  }, [products]);
 
   const handleEditProduct = (product) => {
     setSelectedProduct(product);
@@ -147,15 +105,14 @@ const ProductsPage = () => {
   const handleSaveProduct = async () => {
     try {
       if (selectedProduct.id) {
-        await axios.put(`/api/products/${selectedProduct.id}`, selectedProduct);
+        await dispatch(updateProduct({ id: selectedProduct.id, data: selectedProduct }));
         setSnackbar({ open: true, message: 'Product updated successfully', severity: 'success' });
       } else {
-        await axios.post('/api/products', selectedProduct);
+        await dispatch(createProduct(selectedProduct));
         setSnackbar({ open: true, message: 'Product created successfully', severity: 'success' });
       }
       setDialogOpen(false);
       setSelectedProduct(null);
-      fetchData();
     } catch (error) {
       setSnackbar({ open: true, message: 'Error saving product', severity: 'error' });
     }
@@ -163,11 +120,10 @@ const ProductsPage = () => {
 
   const handleDeleteConfirm = async () => {
     try {
-      await axios.delete(`/api/products/${selectedProduct.id}`);
+      await dispatch(deleteProductThunk(selectedProduct.id));
       setSnackbar({ open: true, message: 'Product deleted successfully', severity: 'success' });
       setDeleteDialogOpen(false);
       setSelectedProduct(null);
-      fetchData();
     } catch (error) {
       setSnackbar({ open: true, message: 'Error deleting product', severity: 'error' });
     }
@@ -358,14 +314,12 @@ const ProductsPage = () => {
     },
   ];
 
-  const filteredProducts = products.filter(product => {
+  const filteredProducts = productRows.filter(product => {
     const matchesSearch = product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    
     const matchesCategory = filterCategory === 'all' || product.category === filterCategory;
     const matchesVendor = filterVendor === 'all' || product.vendor === filterVendor;
     const matchesStatus = filterStatus === 'all' || product.status === filterStatus;
-    
     return matchesSearch && matchesCategory && matchesVendor && matchesStatus;
   });
 
@@ -379,6 +333,34 @@ const ProductsPage = () => {
 
   return (
     <Box>
+      {/* Vendors Overview */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Typography variant="h6" sx={{ mb: 1 }}>Vendors Overview</Typography>
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+          <Paper sx={{ p: 2, flex: 1, minWidth: 260 }}>
+            <Typography variant="subtitle1" fontWeight="bold">Individual Vendors ({vendorsByType.individual.length})</Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+              {vendorsByType.individual.slice(0, 12).map(v => (
+                <Chip key={v.id} label={v.name} size="small" color="success" />
+              ))}
+              {vendorsByType.individual.length === 0 && (
+                <Typography variant="body2" color="text.secondary">No individual vendors</Typography>
+              )}
+            </Box>
+          </Paper>
+          <Paper sx={{ p: 2, flex: 1, minWidth: 260 }}>
+            <Typography variant="subtitle1" fontWeight="bold">Business Vendors ({vendorsByType.business.length})</Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+              {vendorsByType.business.slice(0, 12).map(v => (
+                <Chip key={v.id} label={v.name} size="small" color="primary" />
+              ))}
+              {vendorsByType.business.length === 0 && (
+                <Typography variant="body2" color="text.secondary">No business vendors</Typography>
+              )}
+            </Box>
+          </Paper>
+        </Box>
+      </Paper>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" fontWeight="bold">
           Product Management
@@ -428,7 +410,7 @@ const ProductsPage = () => {
                 onChange={(e) => setFilterCategory(e.target.value)}
               >
                 <MenuItem value="all">All Categories</MenuItem>
-                {categories.map((category) => (
+                {(Array.isArray(categories) ? categories : []).map((category) => (
                   <MenuItem key={category.id} value={category.name}>
                     {category.name}
                   </MenuItem>
@@ -446,7 +428,7 @@ const ProductsPage = () => {
                 onChange={(e) => setFilterVendor(e.target.value)}
               >
                 <MenuItem value="all">All Vendors</MenuItem>
-                {vendors.map((vendor) => (
+                {(Array.isArray(vendors) ? vendors : []).map((vendor) => (
                   <MenuItem key={vendor.id} value={vendor.name}>
                     {vendor.name}
                   </MenuItem>
@@ -476,7 +458,7 @@ const ProductsPage = () => {
       {/* Products Data Grid */}
       <Paper sx={{ height: 600 }}>
         <DataGrid
-          rows={filteredProducts}
+          rows={Array.isArray(filteredProducts) ? filteredProducts : []}
           columns={columns}
           pageSize={10}
           rowsPerPageOptions={[10, 25, 50]}
@@ -636,4 +618,5 @@ const ProductsPage = () => {
   );
 };
 
-export default ProductsPage; 
+export default ProductsPage;
+

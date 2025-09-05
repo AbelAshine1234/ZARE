@@ -150,6 +150,9 @@ model Vendor {
   paymentMethods         PaymentMethod[]   @relation("VendorPaymentMethods")
   employees              Employee[]        @relation("VendorEmployees")
 
+  // Notes
+  notes                  VendorNote[]
+
   cashOutRequests        CashOutRequest[]  @relation("VendorCashOutRequests")
   
   @@map("vendor")
@@ -538,6 +541,7 @@ model Category {
   name            String        @unique
   description     String?
   created_at      DateTime      @default(now())
+  status          Boolean       @default(true)
   
   // Relations
   subcategories   Subcategory[] @relation("CategorySubcategories")
@@ -555,6 +559,7 @@ model Subcategory {
   id              Int         @id @default(autoincrement())
   name            String
   created_at      DateTime    @default(now())
+  status          Boolean     @default(true)
   
   // Relations
   category_id     Int
@@ -624,4 +629,17 @@ model VendorCategory {
   category       Category  @relation("CategoryVendorCategories", fields: [category_id], references: [id])
   
   @@map("vendor_category")
+}
+
+model VendorNote {
+  id         Int      @id @default(autoincrement())
+  title      String
+  description String
+  created_at DateTime @default(now())
+
+  // Relations
+  vendor_id  Int
+  vendor     Vendor  @relation(fields: [vendor_id], references: [id])
+
+  @@map("vendor_note")
 }
