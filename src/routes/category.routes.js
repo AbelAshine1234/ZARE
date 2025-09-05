@@ -31,5 +31,10 @@ router.put(
 router.delete('/:id', categoryController.deleteCategory);
 router.get('/:id/subcategories', categoryController.getSubcategoriesByCategoryId);
 
+// Recycle bin endpoints (admin)
+router.get('/admin/deleted/list', categoryController.getDeletedCategories);
+router.post('/admin/deleted/:id/restore', categoryController.restoreCategory);
+router.delete('/admin/deleted/:id', categoryController.permanentlyDeleteCategory);
+
 
 module.exports = router;

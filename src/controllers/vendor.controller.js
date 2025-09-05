@@ -45,6 +45,48 @@ const createVendor = async (req, res, type, imageFields) => {
     // Check if user already has a vendor
     const existingVendor = await prisma.vendor.findUnique({ where: { user_id } });
     if (existingVendor) {
+      if (existingVendor.status === false) {
+        // Revive soft-deleted vendor for this user
+        const revived = await prisma.vendor.update({
+          where: { id: existingVendor.id },
+          data: {
+            status: true,
+            name,
+            type,
+            description,
+            subscription: { connect: { id: subscription_id } },
+          },
+          include: {
+            cover_image: true,
+            fayda_image: true,
+            business_license_image: true,
+            vendorCategories: { include: { category: true } },
+            paymentMethods: true,
+            subscription: true,
+            user: true,
+          },
+        });
+
+        const clean = {
+          id: revived.id,
+          name: revived.name,
+          type: revived.type,
+          description: revived.description,
+          isApproved: revived.is_approved === true,
+          cover_image: revived.cover_image ? { image_url: revived.cover_image.image_url } : null,
+          fayda_image: revived.fayda_image ? { image_url: revived.fayda_image.image_url } : null,
+          business_license_image: revived.business_license_image ? { image_url: revived.business_license_image.image_url } : null,
+          vendorCategories: revived.vendorCategories.map(vc => ({ id: vc.category.id, name: vc.category.name, description: vc.category.description })),
+          paymentMethods: revived.paymentMethods,
+          subscription: revived.subscription,
+          user: revived.user ? { id: revived.user.id, name: revived.user.name, email: revived.user.email, phone_number: revived.user.phone_number } : null,
+          status: revived.status,
+          createdAt: revived.createdAt,
+          updatedAt: revived.updatedAt,
+        };
+
+        return res.status(200).json({ message: "Vendor restored successfully", vendor: clean });
+      }
       return res.status(400).json({ 
         error: userType === "vendor_owner" 
           ? "This vendor owner already has a vendor." 
@@ -170,6 +212,7 @@ const createBusinessVendor = (req, res) => createVendor(req, res, "business", ["
 const getAllVendors = async (req, res) => {
   try {
     const vendors = await prisma.vendor.findMany({
+      where: { status: true },
       include: {
         cover_image: true,
         fayda_image: true,
@@ -208,6 +251,54 @@ const getAllVendors = async (req, res) => {
   } catch (error) {
     console.error("Error fetching vendors:", error);
     return res.status(500).json({ message: "Failed to fetch vendors", error: error.message });
+  }
+};
+
+// Get a single vendor by id (admin only via route middleware)
+const getVendorById = async (req, res) => {
+  try {
+    const idNum = Number(req.params.id);
+    if (!Number.isInteger(idNum)) return res.status(400).json({ error: 'Invalid vendor id' });
+
+    const vendor = await prisma.vendor.findUnique({
+      where: { id: idNum },
+      include: {
+        cover_image: true,
+        fayda_image: true,
+        business_license_image: true,
+        vendorCategories: { include: { category: true } },
+        paymentMethods: true,
+        subscription: true,
+        user: true,
+        wallet: true,
+      },
+    });
+
+    if (!vendor || vendor.status === false) return res.status(404).json({ error: 'Vendor not found' });
+
+    const clean = {
+      id: vendor.id,
+      name: vendor.name,
+      type: vendor.type,
+      description: vendor.description,
+      isApproved: vendor.is_approved === true,
+      cover_image: vendor.cover_image ? { image_url: vendor.cover_image.image_url } : null,
+      fayda_image: vendor.fayda_image ? { image_url: vendor.fayda_image.image_url } : null,
+      business_license_image: vendor.business_license_image ? { image_url: vendor.business_license_image.image_url } : null,
+      vendorCategories: vendor.vendorCategories.map(vc => ({ id: vc.category.id, name: vc.category.name, description: vc.category.description })),
+      paymentMethods: vendor.paymentMethods,
+      subscription: vendor.subscription,
+      user: vendor.user ? { id: vendor.user.id, name: vendor.user.name, email: vendor.user.email, phone_number: vendor.user.phone_number } : null,
+      wallet: vendor.wallet ? { id: vendor.wallet.id, balance: vendor.wallet.balance, status: vendor.wallet.status } : null,
+      status: vendor.status,
+      createdAt: vendor.createdAt,
+      updatedAt: vendor.updatedAt,
+    };
+
+    return res.status(200).json({ vendor: clean });
+  } catch (error) {
+    console.error('Error fetching vendor by id:', error);
+    return res.status(500).json({ error: 'Failed to fetch vendor' });
   }
 };
 
@@ -263,7 +354,7 @@ const getUserVendorStatus = async (req, res) => {
   }
 };
 
-module.exports = { createIndividualVendor, createBusinessVendor, getAllVendors, getUserVendorStatus };
+module.exports = { createIndividualVendor, createBusinessVendor, getAllVendors, getUserVendorStatus, getVendorById };
 
 // Toggle vendor active status (only vendor_owner or employee on their own vendor)
 const updateVendorStatus = async (req, res) => {
@@ -371,3 +462,108 @@ const deleteVendor = async (req, res) => {
 module.exports.updateVendorStatus = updateVendorStatus;
 module.exports.updateVendorApproval = updateVendorApproval;
 module.exports.deleteVendor = deleteVendor;
+// Admin recycling endpoints
+module.exports.getAllVendors = getAllVendors;
+module.exports.getVendorById = getVendorById;
+
+// List soft-deleted vendors (admin)
+module.exports.getDeletedVendors = async (req, res) => {
+  try {
+    const vendors = await prisma.vendor.findMany({
+      where: { status: false },
+      include: { user: true, vendorCategories: { include: { category: true } } }
+    });
+    const clean = vendors.map(v => ({
+      id: v.id,
+      name: v.name,
+      user: v.user ? { id: v.user.id, name: v.user.name, email: v.user.email } : null,
+      categories: v.vendorCategories.map(vc => ({ id: vc.category.id, name: vc.category.name })),
+      deletedAt: v.updatedAt,
+    }));
+    return res.status(200).json({ vendors: clean });
+  } catch (error) {
+    console.error('Error listing deleted vendors:', error);
+    return res.status(500).json({ error: 'Failed to list deleted vendors' });
+  }
+};
+
+// Permanently delete vendor (admin)
+module.exports.permanentlyDeleteVendor = async (req, res) => {
+  try {
+    const idNum = Number(req.params.id);
+    if (!Number.isInteger(idNum)) return res.status(400).json({ error: 'Invalid vendor id' });
+    // Ensure vendor exists
+    const vendor = await prisma.vendor.findUnique({
+      where: { id: idNum },
+      select: {
+        id: true,
+        cover_image_id: true,
+        fayda_image_id: true,
+        business_license_image_id: true,
+        _count: {
+          select: {
+            products: true,
+            orders: true,
+            employees: true,
+            paymentMethods: true,
+            vendorCategories: true,
+          }
+        }
+      }
+    });
+    if (!vendor) return res.status(404).json({ error: 'Vendor not found' });
+
+    // Block if critical dependents exist
+    if ((vendor._count?.products ?? 0) > 0 || (vendor._count?.orders ?? 0) > 0) {
+      return res.status(409).json({
+        error: 'Cannot permanently delete vendor with products or orders. Remove them first.'
+      });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Detach and delete vendor images if present
+      if (vendor.cover_image_id || vendor.fayda_image_id || vendor.business_license_image_id) {
+        await tx.vendor.update({
+          where: { id: idNum },
+          data: {
+            cover_image_id: null,
+            fayda_image_id: null,
+            business_license_image_id: null,
+          }
+        });
+        const imageIds = [vendor.cover_image_id, vendor.fayda_image_id, vendor.business_license_image_id].filter(Boolean);
+        if (imageIds.length > 0) {
+          await tx.image.deleteMany({ where: { id: { in: imageIds } } });
+        }
+      }
+
+      // Remove simple dependents
+      await tx.vendorCategory.deleteMany({ where: { vendor_id: idNum } });
+      await tx.paymentMethod.deleteMany({ where: { vendor_id: idNum } });
+      await tx.employee.deleteMany({ where: { vendor_id: idNum } });
+
+      // Finally delete the vendor
+      await tx.vendor.delete({ where: { id: idNum } });
+    });
+
+    return res.status(200).json({ message: 'Vendor permanently deleted', vendor: { id: idNum } });
+  } catch (error) {
+    console.error('Error hard-deleting vendor:', error);
+    if (error.code === 'P2025') return res.status(404).json({ error: 'Vendor not found' });
+    return res.status(500).json({ error: 'Failed to permanently delete vendor' });
+  }
+};
+
+// Restore a soft-deleted vendor (admin)
+module.exports.restoreVendor = async (req, res) => {
+  try {
+    const idNum = Number(req.params.id);
+    if (!Number.isInteger(idNum)) return res.status(400).json({ error: 'Invalid vendor id' });
+    const restored = await prisma.vendor.update({ where: { id: idNum }, data: { status: true }, select: { id: true, status: true } });
+    return res.status(200).json({ message: 'Vendor restored', vendor: restored });
+  } catch (error) {
+    console.error('Error restoring vendor:', error);
+    if (error.code === 'P2025') return res.status(404).json({ error: 'Vendor not found' });
+    return res.status(500).json({ error: 'Failed to restore vendor' });
+  }
+};

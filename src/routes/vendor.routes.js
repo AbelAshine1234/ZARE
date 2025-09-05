@@ -48,9 +48,12 @@ router.post(
   vendorController.createBusinessVendor
 );
 
-router.get('/', authorizeAdmin,
-  vendorController.getAllVendors
-);
+router.get('/', authorizeAdmin, vendorController.getAllVendors);
+router.get('/:id', authorizeAdmin, vendorController.getVendorById);
+// Recycle bin - soft-deleted
+router.get('/admin/deleted/list', authorizeAdmin, vendorController.getDeletedVendors);
+router.post('/admin/deleted/:id/restore', authorizeAdmin, vendorController.restoreVendor);
+router.delete('/admin/deleted/:id', authorizeAdmin, vendorController.permanentlyDeleteVendor);
 
 // 1) Toggle vendor status (on/off) - only vendor_owner or employee on their own vendor
 router.patch('/status', validateBody(vendorStatusSchema), vendorController.updateVendorStatus);

@@ -287,11 +287,174 @@ const getWalletBalance = async (req, res) => {
   }
 };
 
+// Get transaction by ID
+const getTransactionById = async (req, res) => {
+  try {
+    const { transactionId } = req.params;
+
+    const transaction = await prisma.transaction.findUnique({
+      where: { 
+        transaction_id: transactionId 
+      },
+      include: {
+        wallet: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!transaction) {
+      return res.status(404).json({ error: "Transaction not found" });
+    }
+
+    return res.status(200).json({ transaction });
+  } catch (error) {
+    console.error("Error fetching transaction:", error);
+    return res.status(500).json({ 
+      message: "Failed to fetch transaction", 
+      error: error.message 
+    });
+  }
+};
+
+// Get all wallets with vendor information
+const getAllWallets = async (req, res) => {
+  try {
+    const { page = 1, limit = 50 } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const wallets = await prisma.wallet.findMany({
+      skip,
+      take: Number(limit),
+      include: {
+        user: {
+          include: {
+            vendor: {
+              include: {
+                vendorCategories: {
+                  include: {
+                    category: true
+                  }
+                }
+              }
+            }
+          }
+        },
+        transactions: {
+          orderBy: { created_at: 'desc' },
+          take: 5 // Get last 5 transactions for each wallet
+        }
+      },
+      orderBy: { created_at: 'desc' }
+    });
+
+    const total = await prisma.wallet.count();
+
+    // Transform data to include vendor information
+    const walletsWithVendorInfo = wallets.map(wallet => ({
+      id: wallet.id,
+      balance: wallet.balance,
+      status: wallet.status,
+      created_at: wallet.created_at,
+      updated_at: wallet.updated_at,
+      user_id: wallet.user_id,
+      user: wallet.user,
+      vendor: wallet.user.vendor,
+      recentTransactions: wallet.transactions
+    }));
+
+    return res.status(200).json({
+      wallets: walletsWithVendorInfo,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit))
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching all wallets:", error);
+    return res.status(500).json({ 
+      message: "Failed to fetch wallets", 
+      error: error.message 
+    });
+  }
+};
+
+// Export transactions to CSV
+const exportTransactionsToCSV = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const userIdNum = Number(userId);
+
+    if (isNaN(userIdNum)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        wallet: {
+          user_id: userIdNum
+        }
+      },
+      include: {
+        wallet: {
+          include: {
+            user: {
+              select: {
+                name: true,
+                email: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: { created_at: 'desc' }
+    });
+
+    const headers = ['Date', 'Type', 'Amount', 'Reason', 'Status', 'Transaction ID', 'User Name', 'User Email'];
+    const csvContent = [
+      headers.join(','),
+      ...transactions.map(transaction => [
+        new Date(transaction.created_at).toISOString(),
+        transaction.type,
+        transaction.amount,
+        `"${(transaction.reason || '').replace(/"/g, '""')}"`,
+        transaction.status,
+        transaction.transaction_id,
+        `"${transaction.wallet.user.name}"`,
+        `"${transaction.wallet.user.email}"`
+      ].join(','))
+    ].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="wallet-transactions-${userId}-${new Date().toISOString().split('T')[0]}.csv"`);
+    res.send(csvContent);
+  } catch (error) {
+    console.error("Error exporting transactions:", error);
+    return res.status(500).json({ 
+      message: "Failed to export transactions", 
+      error: error.message 
+    });
+  }
+};
+
 module.exports = {
   getWalletByUserId,
   getWalletTransactions,
   addFunds,
   deductFunds,
   createWallet,
-  getWalletBalance
+  getWalletBalance,
+  getTransactionById,
+  exportTransactionsToCSV,
+  getAllWallets
 };

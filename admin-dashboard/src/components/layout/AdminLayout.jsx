@@ -39,7 +39,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 
-const drawerWidth = 280;
+const drawerWidth = 280; // mirrored in CSS as --drawer-width
 
 const menuItems = [
   {
@@ -49,13 +49,18 @@ const menuItems = [
     color: '#1976d2'
   },
   {
+    text: 'Vendors',
+    icon: <Store />,
+    path: '/vendors',
+    color: '#388e3c'
+  },
+  {
     text: 'User Management',
     icon: <People />,
     path: '/users',
     color: '#388e3c',
     subItems: [
       { text: 'All Users', path: '/users' },
-      { text: 'Vendors', path: '/vendors' },
       { text: 'Drivers', path: '/drivers' },
       { text: 'Employees', path: '/employees' }
     ]
@@ -70,6 +75,18 @@ const menuItems = [
       { text: 'Categories', path: '/categories' },
       { text: 'Subcategories', path: '/subcategories' }
     ]
+  },
+  {
+    text: 'Categories',
+    icon: <Category />,
+    path: '/categories',
+    color: '#2e7d32'
+  },
+  {
+    text: 'Subcategories',
+    icon: <Category />,
+    path: '/subcategories',
+    color: '#2e7d32'
   },
   {
     text: 'Orders & Delivery',
@@ -222,12 +239,11 @@ const AdminLayout = () => {
   );
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box className="page-container" sx={{ display: 'flex' }}>
       <AppBar
         position="fixed"
+        className="appbar-shift"
         sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
           backgroundColor: 'white',
           color: '#333',
           boxShadow: '0 1px 3px rgba(0,0,0,0.12)'
@@ -282,7 +298,7 @@ const AdminLayout = () => {
       
       <Box
         component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
+        sx={{ flexShrink: { sm: 0 } }}
       >
         <Drawer
           variant="temporary"
@@ -293,8 +309,9 @@ const AdminLayout = () => {
           }}
           sx={{
             display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box' },
           }}
+          PaperProps={{ className: 'drawer-paper' }}
         >
           {drawer}
         </Drawer>
@@ -302,8 +319,9 @@ const AdminLayout = () => {
           variant="permanent"
           sx={{
             display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box' },
           }}
+          PaperProps={{ className: 'drawer-paper' }}
           open
         >
           {drawer}
@@ -312,11 +330,12 @@ const AdminLayout = () => {
       
       <Box
         component="main"
+        className="main-with-drawer"
         sx={{
           flexGrow: 1,
-          p: 3,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          mt: '64px'
+          p: 0,
+          mt: '64px',
+          minHeight: 'calc(100vh - 64px)'
         }}
       >
         <Outlet />
@@ -325,4 +344,5 @@ const AdminLayout = () => {
   );
 };
 
-export default AdminLayout; 
+export default AdminLayout;
+

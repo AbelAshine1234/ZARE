@@ -9,6 +9,9 @@ const {
   validateCreateWallet
 } = require('../middleware/wallet.validation.middleware');
 
+// Get all wallets
+router.get('/', walletController.getAllWallets);
+
 // Get wallet by user ID
 router.get('/:userId', validateUserId, walletController.getWalletByUserId);
 
@@ -26,5 +29,11 @@ router.post('/:userId/add-funds', validateUserId, validateAddFunds, walletContro
 
 // Deduct funds from wallet (debit)
 router.post('/:userId/deduct-funds', validateUserId, validateDeductFunds, walletController.deductFunds);
+
+// Get transaction by ID
+router.get('/transaction/:transactionId', walletController.getTransactionById);
+
+// Export transactions to CSV
+router.get('/:userId/export/csv', validateUserId, walletController.exportTransactionsToCSV);
 
 module.exports = router;

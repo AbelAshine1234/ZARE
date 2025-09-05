@@ -60,6 +60,7 @@ const createCategory = async (req, res) => {
 const getAllCategories = async (req, res) => {
   try {
     const categories = await prisma.category.findMany({
+      where: { status: true },
       include: { images: true },
       orderBy: { created_at: "desc" },
     });
@@ -82,7 +83,7 @@ const getCategoryById = async (req, res) => {
       where: { id },
       include: { images: true },
     });
-    if (!category) return res.status(404).json({ error: 'Category not found' });
+    if (!category || category.status === false) return res.status(404).json({ error: 'Category not found' });
 
     res.json(category);
   } catch (error) {
@@ -125,9 +126,10 @@ const updateCategory = async (req, res) => {
     const existingCategory = await prisma.category.findUnique({
       where: { name },
     });
-  
-    if (existingCategory ) {
-     return res.status(409).json({ error: "Category name already exists." });
+
+    // Allow keeping the same name for the same category; only block if it's another record
+    if (existingCategory && existingCategory.id !== id) {
+      return res.status(409).json({ error: "Category name already exists." });
     }
 
     // Update name and description
@@ -219,12 +221,14 @@ const deleteCategory = async (req, res) => {
       // Optional: delete images from Cloudinary if you have public_id stored
     }
 
-    // Delete the category itself
-    await prisma.category.delete({
+    // Soft delete the category itself
+    const updated = await prisma.category.update({
       where: { id },
+      data: { status: false },
+      select: { id: true, status: true },
     });
 
-    return res.status(200).json({ message: "Category and related images deleted successfully" });
+    return res.status(200).json({ message: "Category deleted (soft)", category: updated });
   } catch (error) {
     console.error("Delete category error:", error);
     return res.status(500).json({ error: "Internal server error" });
@@ -256,5 +260,41 @@ module.exports = {
   getCategoryById,
   updateCategory,
   deleteCategory,
-  getSubcategoriesByCategoryId
+  getSubcategoriesByCategoryId,
+  // Recycle bin operations
+  getDeletedCategories: async (req, res) => {
+    try {
+      const cats = await prisma.category.findMany({ where: { status: false }, include: { images: true } });
+      return res.status(200).json({ categories: cats });
+    } catch (e) {
+      console.error('List deleted categories error:', e);
+      return res.status(500).json({ error: 'Failed to list deleted categories' });
+    }
+  },
+  restoreCategory: async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: 'Invalid category ID' });
+      const restored = await prisma.category.update({ where: { id }, data: { status: true }, select: { id: true, status: true } });
+      return res.status(200).json({ message: 'Category restored', category: restored });
+    } catch (e) {
+      console.error('Restore category error:', e);
+      if (e.code === 'P2025') return res.status(404).json({ error: 'Category not found' });
+      return res.status(500).json({ error: 'Failed to restore category' });
+    }
+  },
+  permanentlyDeleteCategory: async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: 'Invalid category ID' });
+      // Delete images first
+      await prisma.image.deleteMany({ where: { category_id: id } });
+      const deleted = await prisma.category.delete({ where: { id }, select: { id: true } });
+      return res.status(200).json({ message: 'Category permanently deleted', category: deleted });
+    } catch (e) {
+      console.error('Permanent delete category error:', e);
+      if (e.code === 'P2025') return res.status(404).json({ error: 'Category not found' });
+      return res.status(500).json({ error: 'Failed to permanently delete category' });
+    }
+  }
 };

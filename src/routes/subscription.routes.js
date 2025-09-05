@@ -22,6 +22,9 @@ router.get('/', subscriptionController.getAllSubscriptions);
 // Get subscription by id
 router.get('/:id', subscriptionController.getSubscriptionById);
 
+// Get subscription details with vendor statistics
+router.get('/:id/details', subscriptionController.getSubscriptionDetails);
+
 // Update subscription by id
 router.put(
   '/:id',

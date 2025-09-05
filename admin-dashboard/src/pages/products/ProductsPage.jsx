@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Paper,
@@ -66,8 +66,9 @@ const ProductsPage = () => {
         axios.get('/api/category'),
         axios.get('/api/vendors')
       ]);
-      
-      setProducts(productsRes.data);
+
+      const apiProducts = Array.isArray(productsRes.data) ? productsRes.data : (productsRes.data?.products || []);
+      setProducts(apiProducts);
       setCategories(categoriesRes.data);
       setVendors(vendorsRes.data);
     } catch (error) {
@@ -133,6 +134,12 @@ const ProductsPage = () => {
       setLoading(false);
     }
   };
+
+  const vendorsByType = useMemo(() => {
+    const individual = vendors.filter(v => v.type === 'individual');
+    const business = vendors.filter(v => v.type === 'business');
+    return { individual, business };
+  }, [vendors]);
 
   const handleEditProduct = (product) => {
     setSelectedProduct(product);
@@ -379,6 +386,34 @@ const ProductsPage = () => {
 
   return (
     <Box>
+      {/* Vendors Overview */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Typography variant="h6" sx={{ mb: 1 }}>Vendors Overview</Typography>
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+          <Paper sx={{ p: 2, flex: 1, minWidth: 260 }}>
+            <Typography variant="subtitle1" fontWeight="bold">Individual Vendors ({vendorsByType.individual.length})</Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+              {vendorsByType.individual.slice(0, 12).map(v => (
+                <Chip key={v.id} label={v.name} size="small" color="success" />
+              ))}
+              {vendorsByType.individual.length === 0 && (
+                <Typography variant="body2" color="text.secondary">No individual vendors</Typography>
+              )}
+            </Box>
+          </Paper>
+          <Paper sx={{ p: 2, flex: 1, minWidth: 260 }}>
+            <Typography variant="subtitle1" fontWeight="bold">Business Vendors ({vendorsByType.business.length})</Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+              {vendorsByType.business.slice(0, 12).map(v => (
+                <Chip key={v.id} label={v.name} size="small" color="primary" />
+              ))}
+              {vendorsByType.business.length === 0 && (
+                <Typography variant="body2" color="text.secondary">No business vendors</Typography>
+              )}
+            </Box>
+          </Paper>
+        </Box>
+      </Paper>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" fontWeight="bold">
           Product Management
@@ -636,4 +671,5 @@ const ProductsPage = () => {
   );
 };
 
-export default ProductsPage; 
+export default ProductsPage;
+

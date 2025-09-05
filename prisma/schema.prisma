@@ -538,6 +538,7 @@ model Category {
   name            String        @unique
   description     String?
   created_at      DateTime      @default(now())
+  status          Boolean       @default(true)
   
   // Relations
   subcategories   Subcategory[] @relation("CategorySubcategories")
@@ -555,6 +556,7 @@ model Subcategory {
   id              Int         @id @default(autoincrement())
   name            String
   created_at      DateTime    @default(now())
+  status          Boolean     @default(true)
   
   // Relations
   category_id     Int
