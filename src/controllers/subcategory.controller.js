@@ -110,7 +110,15 @@ const getAllSubcategories = async (req, res) => {
   try {
     const subcategories = await prisma.subcategory.findMany({
       where: { status: true },
-      include: { images: true },
+      include: { 
+        images: true,
+        category: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      },
       orderBy: { created_at: "desc" },
     });
     return res.status(200).json(subcategories);

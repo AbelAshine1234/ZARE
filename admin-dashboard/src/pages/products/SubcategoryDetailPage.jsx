@@ -27,6 +27,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchSubcategoryDetail, updateSubcategoryWithImages, deleteSubcategory as deleteSubcategoryThunk } from '../../store/slices/subcategoriesSlice';
 import { fetchCategories } from '../../store/slices/categoriesSlice';
 // no direct API calls here; all via Redux thunks
+import LoadingOverlay from '../../components/LoadingOverlay';
 
 const SubcategoryDetailPage = () => {
   const { id } = useParams();
@@ -103,8 +104,8 @@ const SubcategoryDetailPage = () => {
 
   if (subLoading && !subcategory) {
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 400 }}>
-        <Typography>Loading...</Typography>
+      <Box sx={{ position: 'relative', height: 400 }}>
+        <LoadingOverlay open text="Loading subcategory..." />
       </Box>
     );
   }
@@ -125,7 +126,8 @@ const SubcategoryDetailPage = () => {
         </Box>
       </Box>
 
-      <Paper sx={{ p: 3, mb: 3 }}>
+      <Paper sx={{ p: 3, mb: 3, position: 'relative' }}>
+        <LoadingOverlay open={saving} text={saving ? 'Saving...' : ''} />
         <Grid container spacing={2}>
           <Grid item xs={12} md={12}>
             <TextField
@@ -186,7 +188,7 @@ const SubcategoryDetailPage = () => {
       </Paper>
 
       {/* Confirm delete */}
-      <Dialog open={confirmDeleteOpen} onClose={() => setConfirmDeleteOpen(false)}>
+      <Dialog open={confirmDeleteOpen && !saving} onClose={() => setConfirmDeleteOpen(false)}>
         <DialogTitle>Delete Subcategory</DialogTitle>
         <DialogContent>
           <Typography>Are you sure you want to delete "{subcategory?.name}"? This will also remove its images.</Typography>
@@ -198,7 +200,7 @@ const SubcategoryDetailPage = () => {
       </Dialog>
 
       {/* Confirm save */}
-      <Dialog open={confirmSaveOpen} onClose={() => setConfirmSaveOpen(false)}>
+      <Dialog open={confirmSaveOpen && !saving} onClose={() => setConfirmSaveOpen(false)}>
         <DialogTitle>Confirm Save</DialogTitle>
         <DialogContent>
           <Typography>

@@ -389,6 +389,100 @@ const getAllWallets = async (req, res) => {
   }
 };
 
+// Get only vendor wallets
+const getVendorWallets = async (req, res) => {
+  try {
+    const { page = 1, limit = 50 } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const wallets = await prisma.wallet.findMany({
+      skip,
+      take: Number(limit),
+      where: {
+        user: {
+          vendor: {
+            // Any vendor relation indicates vendor account
+            is_not: null
+          }
+        }
+      },
+      include: {
+        user: {
+          include: {
+            vendor: true
+          }
+        }
+      },
+      orderBy: { created_at: 'desc' }
+    });
+
+    const total = await prisma.wallet.count({
+      where: {
+        user: { vendor: { is_not: null } }
+      }
+    });
+
+    return res.status(200).json({
+      wallets,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit))
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching vendor wallets:", error);
+    return res.status(500).json({ 
+      message: "Failed to fetch vendor wallets", 
+      error: error.message 
+    });
+  }
+};
+
+// Get only user wallets (non-vendor accounts)
+const getUserWallets = async (req, res) => {
+  try {
+    const { page = 1, limit = 50 } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const wallets = await prisma.wallet.findMany({
+      skip,
+      take: Number(limit),
+      where: {
+        OR: [
+          { user: { vendor: null } },
+          { user: null } // safety if any orphaned wallet exists
+        ]
+      },
+      include: {
+        user: true
+      },
+      orderBy: { created_at: 'desc' }
+    });
+
+    const total = await prisma.wallet.count({
+      where: { OR: [ { user: { vendor: null } }, { user: null } ] }
+    });
+
+    return res.status(200).json({
+      wallets,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit))
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching user wallets:", error);
+    return res.status(500).json({ 
+      message: "Failed to fetch user wallets", 
+      error: error.message 
+    });
+  }
+};
+
 // Export transactions to CSV
 const exportTransactionsToCSV = async (req, res) => {
   try {
@@ -456,5 +550,7 @@ module.exports = {
   getWalletBalance,
   getTransactionById,
   exportTransactionsToCSV,
-  getAllWallets
+  getAllWallets,
+  getVendorWallets,
+  getUserWallets
 };

@@ -46,7 +46,7 @@ const menuItems = [
     text: 'Dashboard',
     icon: <Dashboard />,
     path: '/',
-    color: '#1976d2'
+    color: '#1976d2'  
   },
   {
     text: 'Vendors',
@@ -72,8 +72,7 @@ const menuItems = [
     color: '#f57c00',
     subItems: [
       { text: 'All Products', path: '/products' },
-      { text: 'Categories', path: '/categories' },
-      { text: 'Subcategories', path: '/subcategories' }
+     
     ]
   },
   {
@@ -266,7 +265,7 @@ const AdminLayout = () => {
           
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <IconButton color="inherit">
-              <Badge badgeContent={4} color="error">
+              <Badge color="error" variant="dot" invisible>
                 <Notifications />
               </Badge>
             </IconButton>

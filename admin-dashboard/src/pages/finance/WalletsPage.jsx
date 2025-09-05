@@ -4,7 +4,7 @@ import { fetchAllWallets } from '../../store/slices/walletsSlice';
 import {
   Box, Paper, Typography, Chip, IconButton, Tooltip, Button, Dialog, DialogTitle, DialogContent, DialogActions,
   Grid, TextField, Select, MenuItem, FormControl, InputLabel, Snackbar, Alert, Card, CardContent,
-  Menu, ListItemIcon, ListItemText
+  Menu, ListItemIcon, ListItemText, Tabs, Tab, Badge
 } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import { Visibility, Refresh, AccountBalance, TrendingUp, TrendingDown, Person, MoreVert, FileDownload, PictureAsPdf, TableChart } from '@mui/icons-material';
@@ -19,6 +19,7 @@ const WalletsPage = () => {
   const [balanceFilter, setBalanceFilter] = useState('all');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [exportMenuAnchor, setExportMenuAnchor] = useState(null);
+  const [activeTab, setActiveTab] = useState('vendors'); // 'vendors' | 'users'
 
   useEffect(() => { 
     dispatch(fetchAllWallets({ page: 1, limit: 100 })); 
@@ -30,29 +31,55 @@ const WalletsPage = () => {
     }
   }, [error]);
 
-  const rows = useMemo(() => allWallets.map(wallet => {
-    const vendorId = wallet.user?.vendor?.id || wallet.vendor?.id || null;
-    const userId = wallet.user_id;
-    return ({
-      // Prefer vendor id for display; fall back to user id
-      id: vendorId ?? userId,
-      vendorId,
-      routeId: vendorId ?? userId,
-      walletId: wallet.id,
-      name: wallet.vendor?.name || 'Unknown Vendor',
-      type: wallet.vendor?.type || wallet.user?.type || 'unknown',
-      status: wallet.vendor?.status,
-      isApproved: wallet.vendor?.is_approved,
-      owner: wallet.user?.name,
-      walletBalance: wallet.balance || 0,
-      walletStatus: wallet.status || 'inactive',
-      hasWallet: true,
-      createdAt: wallet.created_at,
-      userId
-    });
-  }), [allWallets]);
+  const vendorRows = useMemo(() => (allWallets || [])
+    .filter(w => !!(w.vendor || w.user?.vendor))
+    .map(wallet => {
+      const vendorId = wallet.user?.vendor?.id || wallet.vendor?.id || null;
+      const userId = wallet.user_id;
+      return ({
+        id: vendorId ?? userId,
+        vendorId,
+        routeId: vendorId ?? userId,
+        walletId: wallet.id,
+        name: wallet.vendor?.name || wallet.user?.vendor?.name || 'Unknown Vendor',
+        type: wallet.vendor?.type || wallet.user?.vendor?.type || 'vendor',
+        status: wallet.vendor?.status ?? wallet.user?.vendor?.status,
+        isApproved: wallet.vendor?.is_approved ?? wallet.user?.vendor?.is_approved,
+        owner: wallet.user?.name,
+        walletBalance: wallet.balance || 0,
+        walletStatus: wallet.status || 'inactive',
+        hasWallet: true,
+        createdAt: wallet.created_at,
+        userId
+      });
+    })
+  , [allWallets]);
 
-  const filtered = rows.filter(r => {
+  const userRows = useMemo(() => (allWallets || [])
+    .filter(w => !w.vendor && !w.user?.vendor)
+    .map(wallet => {
+      const userId = wallet.user_id;
+      return ({
+        id: userId,
+        vendorId: null,
+        routeId: userId,
+        walletId: wallet.id,
+        name: wallet.user?.name || 'User',
+        type: wallet.user?.type || 'user',
+        status: wallet.user?.status,
+        isApproved: wallet.user?.is_approved,
+        owner: wallet.user?.email || wallet.user?.phone || wallet.user?.name,
+        walletBalance: wallet.balance || 0,
+        walletStatus: wallet.status || 'inactive',
+        hasWallet: true,
+        createdAt: wallet.created_at,
+        userId
+      });
+    })
+  , [allWallets]);
+
+  const baseRows = activeTab === 'vendors' ? vendorRows : userRows;
+  const filtered = baseRows.filter(r => {
     const q = search.trim().toLowerCase();
     const matchSearch = !q || 
       r.name?.toLowerCase().includes(q) || 
@@ -70,7 +97,7 @@ const WalletsPage = () => {
 
   const columns = [
     { field: 'id', headerName: 'ID', width: 80 },
-    { field: 'name', headerName: 'Vendor Name', width: 200, renderCell: (p) => (
+    { field: 'name', headerName: activeTab === 'vendors' ? 'Vendor Name' : 'User Name', width: 200, renderCell: (p) => (
       <Box>
         <Typography variant="body2" fontWeight="medium">{p.value}</Typography>
         <Typography variant="caption" color="text.secondary">{p.row.owner}</Typography>
@@ -144,10 +171,10 @@ const WalletsPage = () => {
   ];
 
   // Calculate summary statistics
-  const totalVendors = rows.length;
-  const vendorsWithWallets = rows.filter(r => r.hasWallet).length;
-  const totalBalance = rows.reduce((sum, r) => sum + (r.walletBalance || 0), 0);
-  const averageBalance = vendorsWithWallets > 0 ? totalBalance / vendorsWithWallets : 0;
+  const totalAccounts = baseRows.length;
+  const accountsWithWallets = baseRows.filter(r => r.hasWallet).length;
+  const totalBalance = baseRows.reduce((sum, r) => sum + (r.walletBalance || 0), 0);
+  const averageBalance = accountsWithWallets > 0 ? totalBalance / accountsWithWallets : 0;
 
   // Export functions
   const exportToCSV = () => {
@@ -156,18 +183,18 @@ const WalletsPage = () => {
       return;
     }
 
-    const headers = ['Vendor ID', 'Name', 'Type', 'Status', 'Approved', 'Balance', 'Wallet Status', 'Created'];
+    const headers = [activeTab === 'vendors' ? 'Vendor ID' : 'User ID', 'Name', 'Type', 'Status', 'Approved', 'Balance', 'Wallet Status', 'Created'];
     const csvContent = [
       headers.join(','),
-      ...filtered.map(vendor => [
-        vendor.id,
-        vendor.name,
-        vendor.type,
-        vendor.status ? 'Active' : 'Inactive',
-        vendor.isApproved ? 'Approved' : 'Pending',
-        vendor.walletBalance || '0.00',
-        vendor.walletStatus || 'N/A',
-        vendor.createdAt ? new Date(vendor.createdAt).toLocaleDateString() : 'N/A'
+      ...filtered.map(acc => [
+        acc.id,
+        acc.name,
+        acc.type,
+        acc.status ? 'Active' : 'Inactive',
+        acc.isApproved ? 'Approved' : 'Pending',
+        acc.walletBalance || '0.00',
+        acc.walletStatus || 'N/A',
+        acc.createdAt ? new Date(acc.createdAt).toLocaleDateString() : 'N/A'
       ].join(','))
     ].join('\n');
 
@@ -208,24 +235,24 @@ const WalletsPage = () => {
         </head>
         <body>
           <div class="header">
-            <h1>Wallets Report</h1>
+            <h1>Wallets Report - ${activeTab === 'vendors' ? 'Vendors' : 'Users'}</h1>
             <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
-            <p><strong>Total Vendors:</strong> ${filtered.length}</p>
+            <p><strong>Total ${activeTab === 'vendors' ? 'Vendors' : 'Users'}:</strong> ${filtered.length}</p>
           </div>
           
           <div class="summary">
             <h3>Summary</h3>
-            <p><strong>Total Vendors:</strong> ${filtered.length}</p>
-            <p><strong>Active Vendors:</strong> ${filtered.filter(v => v.status).length}</p>
-            <p><strong>Approved Vendors:</strong> ${filtered.filter(v => v.isApproved).length}</p>
-            <p><strong>Vendors with Wallets:</strong> ${filtered.filter(v => v.hasWallet).length}</p>
+            <p><strong>Total ${activeTab === 'vendors' ? 'Vendors' : 'Users'}:</strong> ${filtered.length}</p>
+            <p><strong>Active Accounts:</strong> ${filtered.filter(v => v.status).length}</p>
+            <p><strong>Approved Accounts:</strong> ${filtered.filter(v => v.isApproved).length}</p>
+            <p><strong>Accounts with Wallets:</strong> ${filtered.filter(v => v.hasWallet).length}</p>
             <p><strong>Total Balance:</strong> $${filtered.reduce((sum, v) => sum + (parseFloat(v.walletBalance) || 0), 0).toFixed(2)}</p>
           </div>
 
           <table>
             <thead>
               <tr>
-                <th>Vendor ID</th>
+                <th>${activeTab === 'vendors' ? 'Vendor ID' : 'User ID'}</th>
                 <th>Name</th>
                 <th>Type</th>
                 <th>Status</th>
@@ -236,16 +263,16 @@ const WalletsPage = () => {
               </tr>
             </thead>
             <tbody>
-              ${filtered.map(vendor => `
+              ${filtered.map(acc => `
                 <tr>
-                  <td>${vendor.id}</td>
-                  <td>${vendor.name}</td>
-                  <td>${vendor.type}</td>
-                  <td>${vendor.status ? 'Active' : 'Inactive'}</td>
-                  <td>${vendor.isApproved ? 'Approved' : 'Pending'}</td>
-                  <td>$${vendor.walletBalance || '0.00'}</td>
-                  <td>${vendor.walletStatus || 'N/A'}</td>
-                  <td>${vendor.createdAt ? new Date(vendor.createdAt).toLocaleDateString() : 'N/A'}</td>
+                  <td>${acc.id}</td>
+                  <td>${acc.name}</td>
+                  <td>${acc.type}</td>
+                  <td>${acc.status ? 'Active' : 'Inactive'}</td>
+                  <td>${acc.isApproved ? 'Approved' : 'Pending'}</td>
+                  <td>$${acc.walletBalance || '0.00'}</td>
+                  <td>${acc.walletStatus || 'N/A'}</td>
+                  <td>${acc.createdAt ? new Date(acc.createdAt).toLocaleDateString() : 'N/A'}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -263,21 +290,45 @@ const WalletsPage = () => {
 
   return (
     <Box sx={{ height: 'calc(100vh - 112px)' }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h4" fontWeight="bold">Vendor Wallets</Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+        <Typography variant="h4" fontWeight="bold">Wallets</Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button variant="outlined" startIcon={<Refresh />} onClick={() => dispatch(fetchAllWallets({ page: 1, limit: 100 }))}>
             Refresh
           </Button>
           <Tooltip title="Export Data">
-            <IconButton
-              onClick={(e) => setExportMenuAnchor(e.currentTarget)}
-              disabled={!filtered || filtered.length === 0}
-            >
-              <MoreVert />
-            </IconButton>
+            <span>
+              <IconButton
+                onClick={(e) => setExportMenuAnchor(e.currentTarget)}
+                disabled={!filtered || filtered.length === 0}
+              >
+                <MoreVert />
+              </IconButton>
+            </span>
           </Tooltip>
         </Box>
+      </Box>
+
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+        <Tabs
+          value={activeTab}
+          onChange={(e, v) => setActiveTab(v)}
+          textColor="primary"
+          indicatorColor="primary"
+        >
+          <Tab
+            value="vendors"
+            label={<Badge color="primary" badgeContent={vendorRows.length} showZero>Vendors</Badge>}
+            icon={<AccountBalance fontSize="small" />}
+            iconPosition="start"
+          />
+          <Tab
+            value="users"
+            label={<Badge color="secondary" badgeContent={userRows.length} showZero>Users</Badge>}
+            icon={<Person fontSize="small" />}
+            iconPosition="start"
+          />
+        </Tabs>
       </Box>
 
       {/* Summary Cards */}
@@ -286,10 +337,10 @@ const WalletsPage = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" color="primary" gutterBottom>
-                Total Vendors
+                Total {activeTab === 'vendors' ? 'Vendors' : 'Users'}
               </Typography>
               <Typography variant="h4" fontWeight="bold">
-                {totalVendors}
+                {totalAccounts}
               </Typography>
             </CardContent>
           </Card>
@@ -301,7 +352,7 @@ const WalletsPage = () => {
                 With Wallets
               </Typography>
               <Typography variant="h4" fontWeight="bold">
-                {vendorsWithWallets}
+                {accountsWithWallets}
               </Typography>
             </CardContent>
           </Card>
@@ -371,7 +422,6 @@ const WalletsPage = () => {
         <DataGrid
           rows={filtered}
           columns={columns}
-          pagination={false}
           loading={allWalletsLoading}
           disableSelectionOnClick
           hideFooter

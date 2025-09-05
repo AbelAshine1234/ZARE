@@ -23,9 +23,11 @@ import {
 import { Search, Visibility } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import axios from 'axios';
+import { useAuth } from '../../contexts/AuthContext';
 
 const OrdersPage = () => {
   const [orders, setOrders] = useState([]);
+  const { user: currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -47,7 +49,7 @@ const OrdersPage = () => {
         {
           id: 1,
           order_number: 'ORD-0001',
-          customer_name: 'John Doe',
+          customer_name: currentUser?.name || 'Customer',
           customer_phone: '+1234567890',
           status: 'processing',
           total_amount: 149.99,

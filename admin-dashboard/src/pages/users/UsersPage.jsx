@@ -32,9 +32,11 @@ import {
 } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import axios from 'axios';
+import { useAuth } from '../../contexts/AuthContext';
 
 const UsersPage = () => {
   const [users, setUsers] = useState([]);
+  const { user: currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
@@ -51,19 +53,30 @@ const UsersPage = () => {
   const fetchUsers = async () => {
     try {
       const response = await axios.get('/api/users');
-      setUsers(response.data);
+      const payload = Array.isArray(response.data) ? response.data : (response.data?.users || []);
+      setUsers(payload);
     } catch (error) {
       console.error('Error fetching users:', error);
       // Mock data for demonstration
       setUsers([
-        {
+        // current user placeholder for demo
+        currentUser ? {
+          id: currentUser.id || 1,
+          name: currentUser.name || 'Admin',
+          email: currentUser.email || 'admin@example.com',
+          phone_number: currentUser.phone_number || '+0000000000',
+          type: currentUser.type || 'admin',
+          is_verified: !!currentUser.is_verified,
+          created_at: currentUser.created_at || new Date().toISOString(),
+          status: currentUser.status || 'active'
+        } : {
           id: 1,
-          name: 'John Doe',
-          email: 'john@example.com',
-          phone_number: '+1234567890',
-          type: 'client',
+          name: 'Admin',
+          email: 'admin@example.com',
+          phone_number: '+0000000000',
+          type: 'admin',
           is_verified: true,
-          created_at: '2024-01-15T10:30:00Z',
+          created_at: new Date().toISOString(),
           status: 'active'
         },
         {
@@ -318,7 +331,7 @@ const UsersPage = () => {
     },
   ];
 
-  const filteredUsers = users.filter(user => {
+  const filteredUsers = (Array.isArray(users) ? users : []).filter(user => {
     const matchesSearch = user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.phone_number?.includes(searchTerm);
@@ -410,7 +423,7 @@ const UsersPage = () => {
       {/* Users Data Grid */}
       <Paper sx={{ height: 600 }}>
         <DataGrid
-          rows={filteredUsers}
+          rows={Array.isArray(filteredUsers) ? filteredUsers : []}
           columns={columns}
           pageSize={10}
           rowsPerPageOptions={[10, 25, 50]}

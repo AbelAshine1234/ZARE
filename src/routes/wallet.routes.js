@@ -12,6 +12,12 @@ const {
 // Get all wallets
 router.get('/', walletController.getAllWallets);
 
+// Get vendor wallets
+router.get('/vendors', walletController.getVendorWallets);
+
+// Get user wallets
+router.get('/users', walletController.getUserWallets);
+
 // Get wallet by user ID
 router.get('/:userId', validateUserId, walletController.getWalletByUserId);
 

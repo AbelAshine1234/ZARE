@@ -1,9 +1,9 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import api from '../../utils/api';
+import { subscriptionsApi } from '../../utils/api';
 
 export const fetchSubscriptions = createAsyncThunk('subscriptions/fetchAll', async (_, thunkAPI) => {
   try {
-    const res = await api.get('/api/subscription');
+    const res = await subscriptionsApi.list();
     return res.data || [];
   } catch (e) {
     return thunkAPI.rejectWithValue(e.response?.data?.error || 'Failed to load subscriptions');
@@ -12,7 +12,7 @@ export const fetchSubscriptions = createAsyncThunk('subscriptions/fetchAll', asy
 
 export const fetchSubscriptionDetail = createAsyncThunk('subscriptions/fetchDetail', async (id, thunkAPI) => {
   try {
-    const res = await api.get(`/api/subscription/${id}/details`);
+    const res = await subscriptionsApi.detail(id);
     return res.data;
   } catch (e) {
     return thunkAPI.rejectWithValue(e.response?.data?.error || e.response?.data?.message || 'Failed to load subscription details');
@@ -21,7 +21,7 @@ export const fetchSubscriptionDetail = createAsyncThunk('subscriptions/fetchDeta
 
 export const createSubscriptionThunk = createAsyncThunk('subscriptions/create', async ({ plan, amount, start_date, end_date, status }, thunkAPI) => {
   try {
-    const res = await api.post('/api/subscription', { plan, amount, start_date, end_date, status });
+    const res = await subscriptionsApi.create({ plan, amount, start_date, end_date, status });
     return res.data.subscription;
   } catch (e) {
     return thunkAPI.rejectWithValue(e.response?.data?.error || 'Failed to create subscription');
@@ -30,7 +30,7 @@ export const createSubscriptionThunk = createAsyncThunk('subscriptions/create', 
 
 export const updateSubscriptionThunk = createAsyncThunk('subscriptions/update', async ({ id, plan, amount, start_date, end_date, status }, thunkAPI) => {
   try {
-    const res = await api.put(`/api/subscription/${id}`, { plan, amount, start_date, end_date, status });
+    const res = await subscriptionsApi.update({ id, plan, amount, start_date, end_date, status });
     return res.data.subscription;
   } catch (e) {
     return thunkAPI.rejectWithValue(e.response?.data?.error || 'Failed to update subscription');
@@ -39,7 +39,7 @@ export const updateSubscriptionThunk = createAsyncThunk('subscriptions/update', 
 
 export const deleteSubscriptionThunk = createAsyncThunk('subscriptions/delete', async (id, thunkAPI) => {
   try {
-    await api.delete(`/api/subscription/${id}`);
+    await subscriptionsApi.remove(id);
     return id;
   } catch (e) {
     return thunkAPI.rejectWithValue(e.response?.data?.error || 'Failed to delete subscription');

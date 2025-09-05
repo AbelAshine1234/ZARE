@@ -1,26 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Box, Paper, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, IconButton, Tooltip, Snackbar, Alert } from '@mui/material';
+import LoadingOverlay from '../../components/LoadingOverlay';
 import { DataGrid } from '@mui/x-data-grid';
 import { Add, Refresh, Visibility } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchCategories } from '../../store/slices/categoriesSlice';
-import { createAsyncThunk } from '@reduxjs/toolkit';
-import api from '../../utils/api';
+import { fetchCategories, createCategory, updateCategoryWithImages, deleteCategoryThunk } from '../../store/slices/categoriesSlice';
 
-// Local thunk to create category with images
-export const createCategoryThunk = createAsyncThunk('categories/createOne', async ({ name, description, files }, thunkAPI) => {
-  try {
-    const form = new FormData();
-    form.append('name', name);
-    form.append('description', description);
-    files?.forEach(f => form.append('category_pictures', f));
-    const res = await api.post('/api/category', form, { headers: { 'Content-Type': 'multipart/form-data' } });
-    return res.data?.category;
-  } catch (e) {
-    return thunkAPI.rejectWithValue(e.response?.data?.error || 'Failed to create category');
-  }
-});
+// All API calls are handled in Redux thunks imported above
 
 const CategoriesPage = () => {
   const dispatch = useDispatch();
@@ -41,15 +28,12 @@ const CategoriesPage = () => {
   const save = async () => {
     try {
       if (editing) {
-        const form = new FormData();
-        form.append('name', name);
-        form.append('description', description);
-        files.forEach((f) => form.append('category_pictures', f));
-        await api.put(`/api/category/${editing.id}`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+        const res = await dispatch(updateCategoryWithImages({ id: editing.id, name, description, keepImages: [], files }));
+        if (updateCategoryWithImages.rejected.match(res)) throw new Error(res.payload);
         setSnackbar({ open: true, message: 'Category updated', severity: 'success' });
       } else {
-        const res = await dispatch(createCategoryThunk({ name, description, files }));
-        if (createCategoryThunk.rejected.match(res)) throw new Error(res.payload);
+        const res = await dispatch(createCategory({ name, description, files }));
+        if (createCategory.rejected.match(res)) throw new Error(res.payload);
         setSnackbar({ open: true, message: 'Category created', severity: 'success' });
       }
       setDialogOpen(false);
@@ -92,8 +76,9 @@ const CategoriesPage = () => {
         </Box>
       </Box>
 
-      <Paper sx={{ height: 'calc(100% - 56px)' }}>
-        <DataGrid rows={items} columns={columns} loading={loading} pagination={false} hideFooter sx={{ height: '100%' }} />
+      <Paper sx={{ height: 'calc(100% - 56px)', position: 'relative' }}>
+        <DataGrid rows={Array.isArray(items) ? items : []} columns={columns} loading={loading} hideFooter sx={{ height: '100%' }} />
+        <LoadingOverlay open={loading} text="Loading categories..." />
       </Paper>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
@@ -105,16 +90,26 @@ const CategoriesPage = () => {
             <Typography variant="subtitle2" sx={{ mb: 1 }}>Images</Typography>
             <Button component="label" variant="outlined">
               Upload Images
-              <input hidden multiple type="file" accept="image/*" onChange={(e) => setFiles(Array.from(e.target.files || []))} />
+              <input
+                hidden
+                multiple
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const incoming = Array.from(e.target.files || []);
+                  setFiles((prev) => [...prev, ...incoming]);
+                }}
+              />
             </Button>
             {files.length > 0 && (
               <Typography variant="caption" sx={{ ml: 1 }}>{files.length} file(s) selected</Typography>
             )}
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ position: 'relative' }}>
           <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
           <Button variant="contained" onClick={save}>Save</Button>
+          <LoadingOverlay open={loading} text="Saving..." />
         </DialogActions>
       </Dialog>
 

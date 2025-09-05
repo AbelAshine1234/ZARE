@@ -165,8 +165,11 @@ const CategoryDetailPage = () => {
               <Button component="label" variant="outlined" startIcon={<Add />}>Add Images
                 <input hidden multiple type="file" accept="image/*" onChange={(e) => {
                   const files = Array.from(e.target.files || []);
-                  setNewFiles(files);
-                  setShowNewPreviews(files.map(f => URL.createObjectURL(f)));
+                  if (!files.length) return;
+                  setNewFiles((prev) => [...prev, ...files]);
+                  setShowNewPreviews((prev) => [...prev, ...files.map(f => URL.createObjectURL(f))]);
+                  // reset input so the same files can be selected again if needed
+                  e.target.value = '';
                 }} />
               </Button>
             </Box>

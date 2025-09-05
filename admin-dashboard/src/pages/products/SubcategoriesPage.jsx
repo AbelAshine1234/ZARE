@@ -6,10 +6,11 @@ import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchSubcategories, createSubcategory, updateSubcategoryWithImages, deleteSubcategory } from '../../store/slices/subcategoriesSlice';
 import { fetchCategories } from '../../store/slices/categoriesSlice';
+import LoadingOverlay from '../../components/LoadingOverlay';
 
 const SubcategoriesPage = () => {
   const dispatch = useDispatch();
-  const { list: items, loading } = useSelector(state => state.subcategories);
+  const { list: items, loading, createLoading, updateLoading } = useSelector(state => state.subcategories);
   const { list: categories } = useSelector(state => state.categories);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -39,24 +40,32 @@ const SubcategoriesPage = () => {
 
       if (editing) {
         const res = await dispatch(updateSubcategoryWithImages({ id: editing.id, name, category_id: categoryId, keepImages: [], files }));
-        if (updateSubcategoryWithImages.rejected.match(res)) throw new Error(res.payload);
+        if (updateSubcategoryWithImages.rejected.match(res)) {
+          setSnackbar({ open: true, message: res.payload || 'Update failed', severity: 'error' });
+          return;
+        }
         setSnackbar({ open: true, message: 'Subcategory updated', severity: 'success' });
       } else {
         const res = await dispatch(createSubcategory({ name, category_id: categoryId, files }));
-        if (createSubcategory.rejected.match(res)) throw new Error(res.payload);
+        if (createSubcategory.rejected.match(res)) {
+          setSnackbar({ open: true, message: res.payload || 'Create failed', severity: 'error' });
+          return;
+        }
         setSnackbar({ open: true, message: 'Subcategory created', severity: 'success' });
       }
       setDialogOpen(false);
-      dispatch(fetchSubcategories());
     } catch (e) {
-      setSnackbar({ open: true, message: e.response?.data?.error || 'Save failed', severity: 'error' });
+      setSnackbar({ open: true, message: e.message || 'Save failed', severity: 'error' });
     }
   };
 
   const remove = async (row) => {
     try {
       const res = await dispatch(deleteSubcategory({ id: row.id }));
-      if (deleteSubcategory.rejected.match(res)) throw new Error(res.payload);
+      if (deleteSubcategory.rejected.match(res)) {
+        setSnackbar({ open: true, message: res.payload || 'Delete failed', severity: 'error' });
+        return;
+      }
       setSnackbar({ open: true, message: 'Subcategory deleted', severity: 'success' });
     } catch (e) {
       setSnackbar({ open: true, message: e.message || 'Delete failed', severity: 'error' });
@@ -68,11 +77,9 @@ const SubcategoriesPage = () => {
     { field: 'name', headerName: 'Name', width: 220 },
     { field: 'category', headerName: 'Category', flex: 1, minWidth: 200, valueGetter: (p) => p.row.category?.name || '' },
     {
-      field: 'actions', headerName: 'Actions', width: 180, renderCell: (p) => (
+      field: 'actions', headerName: 'Actions', width: 120, renderCell: (p) => (
         <Box>
           <Tooltip title="View"><IconButton size="small" color="primary" onClick={() => navigate(`/subcategories/${p.row.id}`)}><Visibility /></IconButton></Tooltip>
-          <Tooltip title="Edit"><IconButton size="small" color="primary" onClick={() => openEdit(p.row)}><Edit /></IconButton></Tooltip>
-          <Tooltip title="Delete"><IconButton size="small" color="error" onClick={() => remove(p.row)}><Delete /></IconButton></Tooltip>
         </Box>
       )
     }
@@ -89,17 +96,18 @@ const SubcategoriesPage = () => {
       </Box>
 
       <Paper sx={{ height: 'calc(100% - 56px)' }}>
-        <DataGrid rows={items} columns={columns} loading={loading} pagination={false} hideFooter sx={{ height: '100%' }} />
+        <DataGrid rows={Array.isArray(items) ? items : []} columns={columns} loading={loading} hideFooter sx={{ height: '100%' }} />
       </Paper>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>{editing ? 'Edit Subcategory' : 'Create Subcategory'}</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ position: 'relative' }}>
+          <LoadingOverlay open={createLoading || updateLoading} message={editing ? 'Updating...' : 'Creating...'} />
           <TextField label="Name" value={name} onChange={(e) => setName(e.target.value)} fullWidth sx={{ mt: 1 }} />
           <FormControl fullWidth sx={{ mt: 2 }}>
             <InputLabel>Category</InputLabel>
             <Select value={categoryId} label="Category" onChange={(e) => setCategoryId(e.target.value)}>
-              {categories.map(c => (
+              {(Array.isArray(categories) ? categories : []).map(c => (
                 <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
               ))}
             </Select>
@@ -116,8 +124,8 @@ const SubcategoriesPage = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={save}>Save</Button>
+          <Button onClick={() => setDialogOpen(false)} disabled={createLoading || updateLoading}>Cancel</Button>
+          <Button variant="contained" onClick={save} disabled={createLoading || updateLoading}>Save</Button>
         </DialogActions>
       </Dialog>
 
