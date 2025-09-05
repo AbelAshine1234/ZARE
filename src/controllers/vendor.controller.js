@@ -567,3 +567,91 @@ module.exports.restoreVendor = async (req, res) => {
     return res.status(500).json({ error: 'Failed to restore vendor' });
   }
 };
+
+// Add payment method to vendor (admin)
+module.exports.addVendorPaymentMethod = async (req, res) => {
+  try {
+    const vendorId = Number(req.params.id);
+    if (!Number.isInteger(vendorId)) return res.status(400).json({ error: 'Invalid vendor id' });
+    const { name, account_number, account_holder, type, details } = req.body;
+    // ensure vendor exists
+    const vendor = await prisma.vendor.findUnique({ where: { id: vendorId }, select: { id: true } });
+    if (!vendor) return res.status(404).json({ error: 'Vendor not found' });
+    const pm = await prisma.paymentMethod.create({
+      data: {
+        name,
+        account_number,
+        account_holder,
+        type,
+        details,
+        vendor: { connect: { id: vendorId } }
+      }
+    });
+    return res.status(201).json({ payment_method: pm });
+  } catch (e) {
+    console.error('Add vendor payment method error:', e);
+    return res.status(500).json({ error: 'Failed to add payment method' });
+  }
+};
+
+// Delete a vendor payment method (admin)
+module.exports.deleteVendorPaymentMethod = async (req, res) => {
+  try {
+    const vendorId = Number(req.params.id);
+    const pmId = Number(req.params.pmId);
+    if (!Number.isInteger(vendorId) || !Number.isInteger(pmId)) return res.status(400).json({ error: 'Invalid id' });
+    // Optionally ensure pm belongs to vendor
+    const pm = await prisma.paymentMethod.findUnique({ where: { id: pmId }, select: { id: true, vendor_id: true } });
+    if (!pm || pm.vendor_id !== vendorId) return res.status(404).json({ error: 'Payment method not found' });
+    await prisma.paymentMethod.delete({ where: { id: pmId } });
+    return res.status(200).json({ message: 'Payment method deleted', id: pmId });
+  } catch (e) {
+    console.error('Delete vendor payment method error:', e);
+    if (e.code === 'P2025') return res.status(404).json({ error: 'Payment method not found' });
+    return res.status(500).json({ error: 'Failed to delete payment method' });
+  }
+};
+
+// Vendor Notes
+module.exports.listVendorNotes = async (req, res) => {
+  try {
+    const vendorId = Number(req.params.id);
+    if (!Number.isInteger(vendorId)) return res.status(400).json({ error: 'Invalid vendor id' });
+    const notes = await prisma.vendorNote.findMany({
+      where: { vendor_id: vendorId },
+      orderBy: { created_at: 'desc' }
+    });
+    return res.status(200).json({ notes });
+  } catch (e) {
+    console.error('List vendor notes error:', e);
+    return res.status(500).json({ error: 'Failed to list notes' });
+  }
+};
+
+module.exports.createVendorNote = async (req, res) => {
+  try {
+    const vendorId = Number(req.params.id);
+    const { title, description } = req.body;
+    if (!Number.isInteger(vendorId)) return res.status(400).json({ error: 'Invalid vendor id' });
+    if (!title || !description) return res.status(400).json({ error: 'title and description are required' });
+    const note = await prisma.vendorNote.create({ data: { vendor_id: vendorId, title, description } });
+    return res.status(201).json({ note });
+  } catch (e) {
+    console.error('Create vendor note error:', e);
+    return res.status(500).json({ error: 'Failed to create note' });
+  }
+};
+
+module.exports.deleteVendorNote = async (req, res) => {
+  try {
+    const vendorId = Number(req.params.id);
+    const noteId = Number(req.params.noteId);
+    if (!Number.isInteger(vendorId) || !Number.isInteger(noteId)) return res.status(400).json({ error: 'Invalid id' });
+    await prisma.vendorNote.delete({ where: { id: noteId } });
+    return res.status(200).json({ message: 'Note deleted', id: noteId });
+  } catch (e) {
+    console.error('Delete vendor note error:', e);
+    if (e.code === 'P2025') return res.status(404).json({ error: 'Note not found' });
+    return res.status(500).json({ error: 'Failed to delete note' });
+  }
+};

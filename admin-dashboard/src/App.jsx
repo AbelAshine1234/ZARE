@@ -16,6 +16,8 @@ import UsersPage from './pages/users/UsersPage';
 import VendorsPage from './pages/users/VendorsPage';
 import VendorDetailPage from './pages/users/VendorDetailPage';
 import VendorImagesPage from './pages/users/VendorImagesPage';
+import VendorNotesPage from './pages/users/VendorNotesPage';
+import VendorPaymentMethodsPage from './pages/users/VendorPaymentMethodsPage';
 import DriversPage from './pages/users/DriversPage';
 import EmployeesPage from './pages/users/EmployeesPage';
 import RecycleBinVendorsPage from './pages/users/RecycleBinVendorsPage';
@@ -101,6 +103,8 @@ function AppRoutes() {
         <Route path="users" element={<UsersPage />} />
         <Route path="vendors" element={<VendorsPage />} />
         <Route path="vendors/:id" element={<VendorDetailPage />} />
+        <Route path="vendors/:id/notes" element={<VendorNotesPage />} />
+        <Route path="vendors/:id/payment-methods" element={<VendorPaymentMethodsPage />} />
         <Route path="vendors/:id/images" element={<VendorImagesPage />} />
         <Route path="recycle-bin" element={<RecycleBinVendorsPage />} />
         <Route path="drivers" element={<DriversPage />} />

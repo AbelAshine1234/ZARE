@@ -127,7 +127,6 @@ const menuItems = [
     color: '#455a64',
     subItems: [
       { text: 'Subscriptions', path: '/subscriptions' },
-      { text: 'Payment Methods', path: '/payment-methods' }
     ]
   }
 ];

@@ -79,3 +79,14 @@ export const subscriptionsApi = {
   remove: (id) => api.delete(`/api/subscription/${id}`),
 };
 
+export const vendorNotesApi = {
+  list: (vendorId) => api.get(`/api/vendors/${vendorId}/notes`),
+  create: (vendorId, { title, description }) => api.post(`/api/vendors/${vendorId}/notes`, { title, description }),
+  remove: (vendorId, noteId) => api.delete(`/api/vendors/${vendorId}/notes/${noteId}`),
+};
+
+export const vendorPaymentsApi = {
+  add: (vendorId, body) => api.post(`/api/vendors/${vendorId}/payment-methods`, body),
+  remove: (vendorId, pmId) => api.delete(`/api/vendors/${vendorId}/payment-methods/${pmId}`),
+};
+

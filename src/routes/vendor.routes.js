@@ -5,6 +5,8 @@ const { rootValidation, validateBody, validateFileExistsObjects } = require('../
 const { vendorSchema, vendorStatusSchema, vendorApprovalSchema, vendorDeleteSchema } = require('../schemas/vendor.schema');
 const vendorController = require('../controllers/vendor.controller');
 const { authenticate, authorizeAdmin } = require('../middlewares/authMiddleware');
+const { vendorNoteCreateSchema } = require('../schemas/vendor_note.schema');
+const { vendorPaymentMethodCreateSchema } = require('../schemas/payment_method.schema');
 const jsonFieldsParser = require('../middlewares/jsonFieldsParser'); // import it
 
 router.use(authenticate);
@@ -66,5 +68,14 @@ router.patch('/approve', authorizeAdmin, validateBody(vendorApprovalSchema), ven
 router.delete('/', validateBody(vendorDeleteSchema), vendorController.deleteVendor);
 // - Admin delete by id in path
 router.delete('/:id', authorizeAdmin, vendorController.deleteVendor);
+
+// Vendor notes (admin only for list/create/delete)
+router.get('/:id/notes', authorizeAdmin, vendorController.listVendorNotes);
+router.post('/:id/notes', authorizeAdmin, validateBody(vendorNoteCreateSchema), vendorController.createVendorNote);
+router.delete('/:id/notes/:noteId', authorizeAdmin, vendorController.deleteVendorNote);
+
+// Vendor payment methods (admin add/delete)
+router.post('/:id/payment-methods', authorizeAdmin, validateBody(vendorPaymentMethodCreateSchema), vendorController.addVendorPaymentMethod);
+router.delete('/:id/payment-methods/:pmId', authorizeAdmin, vendorController.deleteVendorPaymentMethod);
 
 module.exports = router;
