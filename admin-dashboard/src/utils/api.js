@@ -90,3 +90,19 @@ export const vendorPaymentsApi = {
   remove: (vendorId, pmId) => api.delete(`/api/vendors/${vendorId}/payment-methods/${pmId}`),
 };
 
+export const walletApi = {
+  getByUserId: (id, isVendor = false) => api.get(`/api/wallet/${id}${isVendor ? '?isVendor=true' : ''}`),
+  getTransactions: (id, page = 1, limit = 20, isVendor = false) =>
+    api.get(`/api/wallet/${id}/transactions?page=${page}&limit=${limit}${isVendor ? '&isVendor=true' : ''}`),
+  addFunds: (id, body, isVendor = false) =>
+    api.post(`/api/wallet/${id}/add-funds${isVendor ? '?isVendor=true' : ''}`, body),
+  deductFunds: (id, body, isVendor = false) =>
+    api.post(`/api/wallet/${id}/deduct-funds${isVendor ? '?isVendor=true' : ''}`, body),
+  getBalance: (id, isVendor = false) =>
+    api.get(`/api/wallet/${id}/balance${isVendor ? '?isVendor=true' : ''}`),
+  getTransaction: (transactionId) => api.get(`/api/wallet/transaction/${transactionId}`),
+  exportCsv: (id, isVendor = false) =>
+    api.get(`/api/wallet/${id}/export/csv${isVendor ? '?isVendor=true' : ''}`, { responseType: 'blob' }),
+  listAll: (page = 1, limit = 50) => api.get(`/api/wallet?page=${page}&limit=${limit}`),
+};
+

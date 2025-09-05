@@ -154,7 +154,11 @@ const WalletsPage = () => {
                   e.stopPropagation();
                   const targetId = params.row.routeId;
                   console.log('Eye icon clicked, navigating to wallet:', targetId);
-                  navigate(`/wallets/${targetId}`);
+                  if (activeTab === 'vendors') {
+                    navigate(`/wallets/${targetId}?isVendor=true`);
+                  } else {
+                    navigate(`/user-wallets/${targetId}`);
+                  }
                 }}
                 sx={{ 
                   '&:hover': { backgroundColor: 'primary.light' },

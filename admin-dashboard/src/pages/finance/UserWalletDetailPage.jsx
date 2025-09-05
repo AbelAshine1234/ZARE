@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchVendorDetail } from '../../store/slices/vendorsSlice';
 import { fetchWalletByUserId, fetchWalletTransactions, addFunds, deductFunds, exportTransactionsCSV } from '../../store/slices/walletsSlice';
 import TransactionDetailModal from '../../components/TransactionDetailModal';
 import {
@@ -10,15 +9,12 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, FormControl, InputLabel, Select, MenuItem,
   Menu, ListItemIcon, ListItemText, IconButton, Tooltip
 } from '@mui/material';
-import { ArrowBack, Refresh, Add, Remove, AccountBalance, TrendingUp, TrendingDown, MoreVert, FileDownload, PictureAsPdf, TableChart } from '@mui/icons-material';
+import { ArrowBack, Refresh, Add, Remove, AccountBalance, TrendingUp, TrendingDown, MoreVert, FileDownload, PictureAsPdf, TableChart, Person } from '@mui/icons-material';
 
-const WalletDetailPage = () => {
+const UserWalletDetailPage = () => {
   const { id } = useParams();
-  const searchParams = new URLSearchParams(window.location.search);
-  const isVendor = searchParams.get('isVendor') === 'true';
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { current: vendor, loading: vendorLoading } = useSelector(state => state.vendors);
   const { currentWallet, transactions, loading: walletLoading, transactionsLoading, error } = useSelector(state => state.wallets);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [addFundsOpen, setAddFundsOpen] = useState(false);
@@ -35,25 +31,12 @@ const WalletDetailPage = () => {
     : (currentWallet?.transactions || []);
 
   useEffect(() => {
-    if (id && isVendor) {
-      dispatch(fetchVendorDetail(id));
+    if (id) {
+      const userId = Number(id);
+      dispatch(fetchWalletByUserId({ id: userId, isVendor: false }));
+      dispatch(fetchWalletTransactions({ id: userId, page: currentPage, limit: 20, isVendor: false }));
     }
-  }, [dispatch, id, isVendor]);
-
-  useEffect(() => {
-    if (vendor) {
-      console.log('Vendor data loaded:', vendor);
-    }
-  }, [vendor]);
-
-  useEffect(() => {
-    // Choose correct ID based on context
-    const resolvedId = isVendor ? (vendor?.id ?? (id ? Number(id) : null)) : (id ? Number(id) : null);
-    if (resolvedId) {
-      dispatch(fetchWalletByUserId({ id: resolvedId, isVendor }));
-      dispatch(fetchWalletTransactions({ id: resolvedId, page: currentPage, limit: 20, isVendor }));
-    }
-  }, [dispatch, vendor?.id, id, currentPage, isVendor]);
+  }, [dispatch, id, currentPage]);
 
   useEffect(() => {
     if (error) {
@@ -62,30 +45,29 @@ const WalletDetailPage = () => {
   }, [error]);
 
   const handleRefresh = () => {
-    const resolvedId = isVendor ? (vendor?.id ?? (id ? Number(id) : null)) : (id ? Number(id) : null);
-    if (resolvedId) {
-      dispatch(fetchWalletByUserId({ id: resolvedId, isVendor }));
-      dispatch(fetchWalletTransactions({ id: resolvedId, page: currentPage, limit: 20, isVendor }));
+    if (id) {
+      const userId = Number(id);
+      dispatch(fetchWalletByUserId({ id: userId, isVendor: false }));
+      dispatch(fetchWalletTransactions({ id: userId, page: currentPage, limit: 20, isVendor: false }));
     }
   };
 
   // Export functions
   const exportToCSV = async () => {
-    const resolvedId = isVendor ? (vendor?.id ?? (id ? Number(id) : null)) : (id ? Number(id) : null);
-    if (!resolvedId) {
+    if (!id) {
       setSnackbar({ open: true, message: 'No user ID available for export', severity: 'error' });
       return;
     }
 
     try {
-      const res = await dispatch(exportTransactionsCSV({ id: resolvedId, isVendor }));
+      const res = await dispatch(exportTransactionsCSV({ id: Number(id), isVendor: false }));
       if (exportTransactionsCSV.fulfilled.match(res)) {
         // Create download link for the blob
         const blob = new Blob([res.payload.data], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        const ownerLabel = isVendor ? (vendor?.name || 'vendor') : (currentWallet?.user?.name || 'user');
+        const ownerLabel = currentWallet?.user?.name || 'user';
         link.download = `wallet-transactions-${ownerLabel}-${new Date().toISOString().split('T')[0]}.csv`;
         document.body.appendChild(link);
         link.click();
@@ -113,7 +95,7 @@ const WalletDetailPage = () => {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Wallet Transactions - ${vendor?.name || 'Vendor'}</title>
+          <title>User Wallet Transactions - ${currentWallet?.user?.name || 'User'}</title>
           <style>
             body { font-family: Arial, sans-serif; margin: 20px; }
             h1 { color: #1976d2; }
@@ -148,8 +130,8 @@ const WalletDetailPage = () => {
                 <div class="muted">${new Date().toLocaleString()}</div>
               </div>
             </div>
-            <h1>Wallet Transactions Report</h1>
-            <p><strong>Vendor:</strong> ${vendor?.name || 'N/A'} (ID: ${vendor?.id || 'N/A'})</p>
+            <h1>User Wallet Transactions Report</h1>
+            <p><strong>User:</strong> ${currentWallet?.user?.name || 'N/A'} (ID: ${currentWallet?.user?.id || 'N/A'})</p>
             <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
           </div>
           
@@ -166,20 +148,20 @@ const WalletDetailPage = () => {
                 <th>Date</th>
                 <th>Type</th>
                 <th>Amount</th>
-                <th>Balance After</th>
-                <th>Description</th>
+                <th>Reason</th>
                 <th>Status</th>
+                <th>Transaction ID</th>
               </tr>
             </thead>
             <tbody>
               ${displayTransactions.map(transaction => `
                 <tr>
-                  <td>${new Date(transaction.createdAt).toLocaleDateString()}</td>
+                  <td>${new Date(transaction.created_at).toLocaleDateString()}</td>
                   <td>${transaction.type}</td>
                   <td>$${transaction.amount}</td>
-                  <td>$${transaction.balance_after}</td>
-                  <td>${transaction.description || ''}</td>
+                  <td>${transaction.reason || ''}</td>
                   <td>${transaction.status}</td>
+                  <td>${transaction.transaction_id}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -205,10 +187,10 @@ const WalletDetailPage = () => {
   const handleAddFunds = async () => {
     try {
       const res = await dispatch(addFunds({ 
-        id: isVendor ? vendor.id : (currentWallet?.user?.id ?? Number(id)), 
+        id: Number(id), 
         amount: parseFloat(formData.amount), 
         reason: formData.reason,
-        isVendor
+        isVendor: false
       }));
       if (addFunds.fulfilled.match(res)) {
         setSnackbar({ open: true, message: 'Funds added successfully', severity: 'success' });
@@ -226,10 +208,10 @@ const WalletDetailPage = () => {
   const handleDeductFunds = async () => {
     try {
       const res = await dispatch(deductFunds({ 
-        id: isVendor ? vendor.id : (currentWallet?.user?.id ?? Number(id)), 
+        id: Number(id), 
         amount: parseFloat(formData.amount), 
         reason: formData.reason,
-        isVendor
+        isVendor: false
       }));
       if (deductFunds.fulfilled.match(res)) {
         setSnackbar({ open: true, message: 'Funds deducted successfully', severity: 'success' });
@@ -268,22 +250,22 @@ const WalletDetailPage = () => {
     setTransactionDetailOpen(true);
   };
 
-  if (vendorLoading || walletLoading) {
+  if (walletLoading) {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 400, gap: 2 }}>
         <CircularProgress />
         <Typography variant="body2" color="text.secondary">
-          {vendorLoading ? 'Loading vendor information...' : 'Loading wallet data...'}
+          Loading wallet data...
         </Typography>
       </Box>
     );
   }
 
-  if (!vendor) {
+  if (!currentWallet) {
     return (
       <Box sx={{ p: 3 }}>
         <Alert severity="error">
-          Vendor not found. Please check the URL and try again.
+          Wallet not found. Please check the URL and try again.
         </Alert>
         <Button 
           variant="outlined" 
@@ -297,32 +279,6 @@ const WalletDetailPage = () => {
     );
   }
 
-  if (!vendor && !vendorLoading) {
-    return (
-      <Box>
-        <Typography variant="h6" color="error">Vendor not found</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Vendor with ID {id} could not be found.
-        </Typography>
-        <Button onClick={() => navigate('/wallets')} startIcon={<ArrowBack />}>
-          Back to Wallets
-        </Button>
-      </Box>
-    );
-  }
-
-  // If vendor is still loading, show loading state
-  if (!vendor) {
-    return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 400, gap: 2 }}>
-        <CircularProgress />
-        <Typography variant="body2" color="text.secondary">
-          Loading vendor information...
-        </Typography>
-      </Box>
-    );
-  }
-
   return (
     <Box>
       {/* Header */}
@@ -332,7 +288,7 @@ const WalletDetailPage = () => {
             <ArrowBack />
           </IconButton>
           <Typography variant="h4" fontWeight="bold">
-            Wallet Details
+            User Wallet Details
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -374,11 +330,20 @@ const WalletDetailPage = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>Wallet Information</Typography>
-              {vendor && (
+              {currentWallet?.user && (
                 <Box sx={{ mb: 3, p: 2, backgroundColor: 'grey.50', borderRadius: 1 }}>
-                  <Typography variant="subtitle2" color="text.secondary">Vendor</Typography>
-                  <Typography variant="h6" fontWeight="medium">
-                    {vendor.name} (ID: #{vendor.id})
+                  <Typography variant="subtitle2" color="text.secondary">User</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <Person fontSize="small" />
+                    <Typography variant="h6" fontWeight="medium">
+                      {currentWallet.user.name} (ID: #{currentWallet.user.id})
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Email: {currentWallet.user.email}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Type: {currentWallet.user.type}
                   </Typography>
                 </Box>
               )}
@@ -416,7 +381,7 @@ const WalletDetailPage = () => {
               ) : (
                 <Box sx={{ textAlign: 'center', py: 4 }}>
                   <Typography variant="body1" color="text.secondary">
-                    No wallet found for this vendor
+                    No wallet found for this user
                   </Typography>
                 </Box>
               )}
@@ -630,4 +595,4 @@ const WalletDetailPage = () => {
   );
 };
 
-export default WalletDetailPage;
+export default UserWalletDetailPage;

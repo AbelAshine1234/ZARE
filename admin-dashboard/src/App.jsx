@@ -36,6 +36,7 @@ import DeliveriesPage from './pages/orders/DeliveriesPage';
 // Financial Management Pages
 import WalletsPage from './pages/finance/WalletsPage';
 import WalletDetailPage from './pages/finance/WalletDetailPage';
+import UserWalletDetailPage from './pages/finance/UserWalletDetailPage';
 import TransactionsPage from './pages/finance/TransactionsPage';
 import CashOutRequestsPage from './pages/finance/CashOutRequestsPage';
 import RefundsPage from './pages/finance/RefundsPage';
@@ -124,6 +125,7 @@ function AppRoutes() {
         {/* Financial Management */}
         <Route path="wallets" element={<WalletsPage />} />
         <Route path="wallets/:id" element={<WalletDetailPage />} />
+        <Route path="user-wallets/:id" element={<UserWalletDetailPage />} />
         <Route path="transactions" element={<TransactionsPage />} />
         <Route path="cashout-requests" element={<CashOutRequestsPage />} />
         <Route path="refunds" element={<RefundsPage />} />

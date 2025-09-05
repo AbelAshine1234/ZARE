@@ -1,12 +1,12 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import api from '../../utils/api';
+import { walletApi } from '../../utils/api';
 
 // Fetch wallet by user (or vendor-resolved) ID
 export const fetchWalletByUserId = createAsyncThunk(
   'wallets/fetchByUserId',
-  async (userId, thunkAPI) => {
+  async ({ id, isVendor = false }, thunkAPI) => {
     try {
-      const res = await api.get(`/api/wallet/${userId}`);
+      const res = await walletApi.getByUserId(id, isVendor);
       return res.data.wallet;
     } catch (e) {
       return thunkAPI.rejectWithValue(
@@ -19,9 +19,9 @@ export const fetchWalletByUserId = createAsyncThunk(
 // Fetch wallet transactions (paginated)
 export const fetchWalletTransactions = createAsyncThunk(
   'wallets/fetchTransactions',
-  async ({ userId, page = 1, limit = 20 }, thunkAPI) => {
+  async ({ id, page = 1, limit = 20, isVendor = false }, thunkAPI) => {
     try {
-      const res = await api.get(`/api/wallet/${userId}/transactions?page=${page}&limit=${limit}`);
+      const res = await walletApi.getTransactions(id, page, limit, isVendor);
       return res.data; // { transactions, pagination }
     } catch (e) {
       return thunkAPI.rejectWithValue(
@@ -34,9 +34,9 @@ export const fetchWalletTransactions = createAsyncThunk(
 // Add funds
 export const addFunds = createAsyncThunk(
   'wallets/addFunds',
-  async ({ userId, amount, reason }, thunkAPI) => {
+  async ({ id, amount, reason, isVendor = false }, thunkAPI) => {
     try {
-      const res = await api.post(`/api/wallet/${userId}/add`, { amount, reason });
+      const res = await walletApi.addFunds(id, { amount, reason }, isVendor);
       return res.data; // { message, wallet, transaction }
     } catch (e) {
       return thunkAPI.rejectWithValue(
@@ -49,9 +49,9 @@ export const addFunds = createAsyncThunk(
 // Deduct funds
 export const deductFunds = createAsyncThunk(
   'wallets/deductFunds',
-  async ({ userId, amount, reason }, thunkAPI) => {
+  async ({ id, amount, reason, isVendor = false }, thunkAPI) => {
     try {
-      const res = await api.post(`/api/wallet/${userId}/deduct`, { amount, reason });
+      const res = await walletApi.deductFunds(id, { amount, reason }, isVendor);
       return res.data; // { message, wallet, transaction }
     } catch (e) {
       return thunkAPI.rejectWithValue(
@@ -64,9 +64,9 @@ export const deductFunds = createAsyncThunk(
 // Wallet balance
 export const fetchWalletBalance = createAsyncThunk(
   'wallets/fetchBalance',
-  async (userId, thunkAPI) => {
+  async ({ id, isVendor = false }, thunkAPI) => {
     try {
-      const res = await api.get(`/api/wallet/${userId}/balance`);
+      const res = await walletApi.getBalance(id, isVendor);
       return res.data; // { balance, wallet_id }
     } catch (e) {
       return thunkAPI.rejectWithValue(
@@ -81,7 +81,7 @@ export const fetchTransactionById = createAsyncThunk(
   'wallets/fetchTransactionById',
   async (transactionId, thunkAPI) => {
     try {
-      const res = await api.get(`/api/wallet/transaction/${transactionId}`);
+      const res = await walletApi.getTransaction(transactionId);
       return res.data.transaction;
     } catch (e) {
       return thunkAPI.rejectWithValue(
@@ -94,10 +94,10 @@ export const fetchTransactionById = createAsyncThunk(
 // Export CSV for a given user (wallet owner)
 export const exportTransactionsCSV = createAsyncThunk(
   'wallets/exportCSV',
-  async (userId, thunkAPI) => {
+  async ({ id, isVendor = false }, thunkAPI) => {
     try {
-      const res = await api.get(`/api/wallet/${userId}/export/csv`, { responseType: 'blob' });
-      return { data: res.data, userId };
+      const res = await walletApi.exportCsv(id, isVendor);
+      return { data: res.data, id };
     } catch (e) {
       return thunkAPI.rejectWithValue(
         e.response?.data?.error || e.response?.data?.message || 'Failed to export transactions'
@@ -111,7 +111,7 @@ export const fetchAllWallets = createAsyncThunk(
   'wallets/fetchAll',
   async ({ page = 1, limit = 50 } = {}, thunkAPI) => {
     try {
-      const res = await api.get(`/api/wallet?page=${page}&limit=${limit}`);
+      const res = await walletApi.listAll(page, limit);
       return res.data; // { wallets, pagination }
     } catch (e) {
       return thunkAPI.rejectWithValue(
@@ -180,17 +180,27 @@ const walletsSlice = createSlice({
       })
       // Add funds
       .addCase(addFunds.fulfilled, (state, action) => {
+        const updatedWallet = action.payload.wallet;
+        const newTransaction = action.payload.transaction;
         if (state.currentWallet) {
-          state.currentWallet = action.payload.wallet;
+          state.currentWallet = updatedWallet;
         }
-        state.balance = action.payload.wallet?.balance ?? state.balance;
+        state.balance = updatedWallet?.balance ?? state.balance;
+        if (newTransaction) {
+          state.transactions = [newTransaction, ...(state.transactions || [])];
+        }
       })
       // Deduct funds
       .addCase(deductFunds.fulfilled, (state, action) => {
+        const updatedWallet = action.payload.wallet;
+        const newTransaction = action.payload.transaction;
         if (state.currentWallet) {
-          state.currentWallet = action.payload.wallet;
+          state.currentWallet = updatedWallet;
         }
-        state.balance = action.payload.wallet?.balance ?? state.balance;
+        state.balance = updatedWallet?.balance ?? state.balance;
+        if (newTransaction) {
+          state.transactions = [newTransaction, ...(state.transactions || [])];
+        }
       })
       // Balance
       .addCase(fetchWalletBalance.fulfilled, (state, action) => {

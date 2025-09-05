@@ -1,31 +1,61 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
-// Get wallet by user ID
+// Helper to resolve wallet context for user or vendor
+const resolveWalletByAccount = async ({ idParam, isVendor }) => {
+  const numericId = Number(idParam);
+  if (isNaN(numericId)) {
+    throw new Error('INVALID_ID');
+  }
+
+  if (isVendor) {
+    const vendor = await prisma.vendor.findUnique({
+      where: { id: numericId },
+      select: { id: true, user_id: true }
+    });
+    if (!vendor) {
+      throw new Error('VENDOR_NOT_FOUND');
+    }
+    const wallet = await prisma.wallet.findUnique({
+      where: { user_id: vendor.user_id }
+    });
+    return { wallet, userId: vendor.user_id };
+  }
+
+  const wallet = await prisma.wallet.findUnique({
+    where: { user_id: numericId }
+  });
+  return { wallet, userId: numericId };
+};
+
+// Get wallet by user or vendor ID
 const getWalletByUserId = async (req, res) => {
   try {
     const { userId } = req.params;
-    const userIdNum = Number(userId);
+    const isVendor = req.query.isVendor === 'true' || req.query.isVendor === '1';
 
-    if (isNaN(userIdNum)) {
-      return res.status(400).json({ error: "Invalid user ID" });
-    }
+    const { wallet } = await resolveWalletByAccount({ idParam: userId, isVendor });
 
-    const wallet = await prisma.wallet.findUnique({
-      where: { user_id: userIdNum },
-      include: {
-        transactions: {
-          orderBy: { created_at: 'desc' },
-          take: 10 // Get last 10 transactions
-        }
-      }
-    });
+    const walletWithTx = wallet
+      ? await prisma.wallet.findUnique({
+          where: { id: wallet.id },
+          include: {
+            user: {
+              select: { id: true, name: true, email: true, type: true }
+            },
+            transactions: {
+              orderBy: { created_at: 'desc' },
+              take: 10
+            }
+          }
+        })
+      : null;
 
-    if (!wallet) {
+    if (!walletWithTx) {
       return res.status(404).json({ error: "Wallet not found" });
     }
 
-    return res.status(200).json({ wallet });
+    return res.status(200).json({ wallet: walletWithTx });
   } catch (error) {
     console.error("Error fetching wallet:", error);
     return res.status(500).json({ 
@@ -35,23 +65,21 @@ const getWalletByUserId = async (req, res) => {
   }
 };
 
-// Get wallet transactions
+// Get wallet transactions (by user or vendor)
 const getWalletTransactions = async (req, res) => {
   try {
     const { userId } = req.params;
     const { page = 1, limit = 20 } = req.query;
-    const userIdNum = Number(userId);
+    const isVendor = req.query.isVendor === 'true' || req.query.isVendor === '1';
 
-    if (isNaN(userIdNum)) {
-      return res.status(400).json({ error: "Invalid user ID" });
-    }
+    const { userId: resolvedUserId } = await resolveWalletByAccount({ idParam: userId, isVendor });
 
     const skip = (Number(page) - 1) * Number(limit);
 
     const transactions = await prisma.transaction.findMany({
       where: {
         wallet: {
-          user_id: userIdNum
+          user_id: resolvedUserId
         }
       },
       skip,
@@ -62,7 +90,7 @@ const getWalletTransactions = async (req, res) => {
     const total = await prisma.transaction.count({
       where: {
         wallet: {
-          user_id: userIdNum
+          user_id: resolvedUserId
         }
       }
     });
@@ -85,30 +113,28 @@ const getWalletTransactions = async (req, res) => {
   }
 };
 
-// Add funds to wallet (credit transaction)
+// Add funds to wallet (credit transaction) for user or vendor
 const addFunds = async (req, res) => {
   try {
     const { userId } = req.params;
     const { amount, reason } = req.body;
-    const userIdNum = Number(userId);
-
-    if (isNaN(userIdNum)) {
-      return res.status(400).json({ error: "Invalid user ID" });
-    }
+    const isVendor = req.query.isVendor === 'true' || req.query.isVendor === '1';
 
     if (!amount || amount <= 0) {
       return res.status(400).json({ error: "Invalid amount" });
     }
 
+    const { userId: resolvedUserId } = await resolveWalletByAccount({ idParam: userId, isVendor });
+
     // Find or create wallet
     let wallet = await prisma.wallet.findUnique({
-      where: { user_id: userIdNum }
+      where: { user_id: resolvedUserId }
     });
 
     if (!wallet) {
       wallet = await prisma.wallet.create({
         data: {
-          user_id: userIdNum,
+          user_id: resolvedUserId,
           balance: 0
         }
       });
@@ -149,23 +175,21 @@ const addFunds = async (req, res) => {
   }
 };
 
-// Deduct funds from wallet (debit transaction)
+// Deduct funds from wallet (debit transaction) for user or vendor
 const deductFunds = async (req, res) => {
   try {
     const { userId } = req.params;
     const { amount, reason } = req.body;
-    const userIdNum = Number(userId);
-
-    if (isNaN(userIdNum)) {
-      return res.status(400).json({ error: "Invalid user ID" });
-    }
+    const isVendor = req.query.isVendor === 'true' || req.query.isVendor === '1';
 
     if (!amount || amount <= 0) {
       return res.status(400).json({ error: "Invalid amount" });
     }
 
+    const { userId: resolvedUserId } = await resolveWalletByAccount({ idParam: userId, isVendor });
+
     const wallet = await prisma.wallet.findUnique({
-      where: { user_id: userIdNum }
+      where: { user_id: resolvedUserId }
     });
 
     if (!wallet) {
@@ -215,15 +239,13 @@ const deductFunds = async (req, res) => {
 const createWallet = async (req, res) => {
   try {
     const { userId } = req.params;
-    const userIdNum = Number(userId);
+    const isVendor = req.query.isVendor === 'true' || req.query.isVendor === '1';
 
-    if (isNaN(userIdNum)) {
-      return res.status(400).json({ error: "Invalid user ID" });
-    }
+    const { userId: resolvedUserId } = await resolveWalletByAccount({ idParam: userId, isVendor });
 
     // Check if wallet already exists
     const existingWallet = await prisma.wallet.findUnique({
-      where: { user_id: userIdNum }
+      where: { user_id: resolvedUserId }
     });
 
     if (existingWallet) {
@@ -233,7 +255,7 @@ const createWallet = async (req, res) => {
     // Create wallet
     const wallet = await prisma.wallet.create({
       data: {
-        user_id: userIdNum,
+        user_id: resolvedUserId,
         balance: 0
       }
     });
@@ -251,18 +273,16 @@ const createWallet = async (req, res) => {
   }
 };
 
-// Get wallet balance
+// Get wallet balance (by user or vendor)
 const getWalletBalance = async (req, res) => {
   try {
     const { userId } = req.params;
-    const userIdNum = Number(userId);
+    const isVendor = req.query.isVendor === 'true' || req.query.isVendor === '1';
 
-    if (isNaN(userIdNum)) {
-      return res.status(400).json({ error: "Invalid user ID" });
-    }
+    const { userId: resolvedUserId } = await resolveWalletByAccount({ idParam: userId, isVendor });
 
     const wallet = await prisma.wallet.findUnique({
-      where: { user_id: userIdNum },
+      where: { user_id: resolvedUserId },
       select: {
         id: true,
         balance: true,
@@ -483,20 +503,18 @@ const getUserWallets = async (req, res) => {
   }
 };
 
-// Export transactions to CSV
+// Export transactions to CSV (by user or vendor)
 const exportTransactionsToCSV = async (req, res) => {
   try {
     const { userId } = req.params;
-    const userIdNum = Number(userId);
+    const isVendor = req.query.isVendor === 'true' || req.query.isVendor === '1';
 
-    if (isNaN(userIdNum)) {
-      return res.status(400).json({ error: "Invalid user ID" });
-    }
+    const { userId: resolvedUserId } = await resolveWalletByAccount({ idParam: userId, isVendor });
 
     const transactions = await prisma.transaction.findMany({
       where: {
         wallet: {
-          user_id: userIdNum
+          user_id: resolvedUserId
         }
       },
       include: {
