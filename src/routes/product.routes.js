@@ -32,6 +32,15 @@ router.get('/', productController.getAllProducts);
 // Get product by ID
 router.get('/:id', productController.getProductById);
 
+//Get product by vendor
+router.get('/:vendorId/products', productController.getProductsByVendor);
+
+// Get products by stock status
+router.get('/stock-status/:status', productController.getProductsByStockStatus);
+
+// Get low stock products for vendor
+router.get('/vendor/:vendor_id/low-stock', productController.getLowStockProducts);
+
 // Update product
 router.put(
   '/:id',

@@ -500,6 +500,7 @@ const registerAsEmployee = async (req, res) => {
 // Login existing user
 const login = async (req, res) => {
   try {
+    console.log("request", req.body)
     const { phone_number, password } = req.body;
 
     // Find user by phone number
@@ -608,4 +609,180 @@ const resendOtp = async (req, res) => {
   }
 };
 
-module.exports = {resendOtp, registerAsClient, login, registerAsAdmin, registerAsDriver, registerVendorOwner, registerAsEmployee, verifyOtp };
+
+// Request OTP for password reset
+const forgotPassword = async (req, res) => {
+  try {
+    const { phone_number } = req.body;
+    if (!phone_number) {
+      return res.status(400).json({ error: "Phone number is required." });
+    }
+
+    const user = await prisma.user.findUnique({ where: { phone_number } });
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    // Send OTP via SMS
+    const { sendOtp } = require("../utils/otp.util");
+    await sendOtp(phone_number, "sms");
+
+    return res.status(200).json({ message: "OTP sent successfully." });
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    return res.status(500).json({ error: "Internal server error." });
+  }
+};
+
+// Verify OTP for password reset and issue reset token
+const verifyResetOtp = async (req, res) => {
+  try {
+    const { phone_number, otp } = req.body;
+    
+    if (!phone_number || !otp) {
+      return res.status(400).json({ error: "Phone number and OTP are required." });
+    }
+
+    // Lazy-load util to avoid env errors during app boot if Twilio envs are missing
+    const { verifyOtp: verifyOtpUtil } = require("../utils/otp.util");
+
+    const valid = await verifyOtpUtil(phone_number, otp);
+    if (!valid) {
+      return res.status(400).json({ error: "Invalid or expired OTP." });
+    }
+
+    // Issue a short-lived reset token
+    const jwt = require('jsonwebtoken');
+    const resetToken = jwt.sign({ phone_number }, process.env.JWT_SECRET, { expiresIn: "10m" });
+
+    return res.status(200).json({ message: "OTP verified.", resetToken });
+  } catch (error) {
+    console.error("Verify reset OTP error:", error);
+    return res.status(500).json({ error: "Internal server error." });
+  }
+};
+
+// Reset password using reset token
+const resetPassword = async (req, res) => {
+  try {
+    const { new_password, resetToken } = req.body;
+
+    if (!new_password || !resetToken) {
+      return res.status(400).json({ error: "New password and reset token are required." });
+    }
+
+    // Verify token to extract phone_number
+    const jwt = require('jsonwebtoken');
+    let payload;
+    try {
+      payload = jwt.verify(resetToken, process.env.JWT_SECRET);
+    } catch {
+      return res.status(400).json({ error: "Invalid or expired reset token." });
+    }
+
+    const bcrypt = require('bcrypt');
+    const hashedPassword = await bcrypt.hash(new_password, 10);
+
+    await prisma.user.update({
+      where: { phone_number: payload.phone_number },
+      data: { password: hashedPassword },
+    });
+
+    return res.status(200).json({ message: "Password reset successfully." });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    return res.status(500).json({ error: "Internal server error." });
+  }
+};
+
+
+
+// Get user profile
+const getUserProfile = async (req, res) => {
+  try {
+    // Get user from JWT token (set by auth middleware)
+    const userId = req.user.id;
+
+    // Get user with related data based on user type
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        client: {
+          include: {
+            image: true,
+            wallet: true
+          }
+        },
+        vendor: {
+          include: {
+            user: true,
+            wallet: true,
+            subscription: true
+          }
+        },
+        driver: {
+          include: {
+            user: true,
+            wallet: true,
+            profile_image: true,
+            license_image: true,
+            fayda_image: true
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Return user profile data
+    return res.status(200).json({
+      id: user.id,
+      name: user.name,
+      phone_number: user.phone_number,
+      email: user.email,
+      type: user.type,
+      is_verified: user.is_verified,
+      isotpVerified: user.isotpVerified,
+      created_at: user.created_at,
+      // Include related data based on user type
+      ...(user.client && {
+        client: {
+          id: user.client.id,
+          image: user.client.image,
+          wallet: user.client.wallet
+        }
+      }),
+      ...(user.vendor && {
+        vendor: {
+          id: user.vendor.id,
+          name: user.vendor.name,
+          type: user.vendor.type,
+          description: user.vendor.description,
+          status: user.vendor.status,
+          is_approved: user.vendor.is_approved,
+          subscription: user.vendor.subscription,
+          wallet: user.vendor.wallet
+        }
+      }),
+      ...(user.driver && {
+        driver: {
+          id: user.driver.id,
+          vehicle_info: user.driver.vehicle_info,
+          current_status: user.driver.current_status,
+          isApproved: user.driver.isApproved,
+          profile_image: user.driver.profile_image,
+          license_image: user.driver.license_image,
+          fayda_image: user.driver.fayda_image,
+          wallet: user.driver.wallet
+        }
+      })
+    });
+  } catch (error) {
+    console.error("Get user profile error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+module.exports = {resendOtp, verifyResetOtp, forgotPassword, resetPassword, registerAsClient, login, registerAsAdmin, registerAsDriver, registerVendorOwner, registerAsEmployee, verifyOtp, getUserProfile };

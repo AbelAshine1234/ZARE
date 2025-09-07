@@ -43,9 +43,12 @@ app.use('/api/category', routes.category);
 app.use('/api/subcategory', routes.subcategory);
 app.use('/api/subscription', routes.subscription);
 app.use('/api/products', routes.product);
+app.use('/api/orders', routes.order);
 app.use('/api/wallet', routes.wallet);
 app.use('/api/cashout-requests', routes.cash_out_request);
+app.use('/api/payouts', routes.payout);
 app.use('/api/drivers', routes.driver);
+app.use('/api/notifications', routes.notification);
 
 // Global error handler
 app.use((err, req, res, next) => {

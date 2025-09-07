@@ -43,6 +43,7 @@ enum PaymentMethodType {
 enum OrderStatus {
   new
   processing
+  ready_to_delivery
   completed
 }
 
@@ -80,6 +81,12 @@ enum TransactionStatus {
   completed
   failed
   cancelled
+}
+
+enum StockStatus {
+  active
+  low_stock
+  out_of_stock
 }
 
 enum RatingEntityType {
@@ -255,6 +262,10 @@ model Product {
   description     String?
   has_discount    Boolean   @default(false)
   stock           Int
+  price           Int
+  stock_status    StockStatus @default(active)
+  low_stock_threshold Int    @default(10)
+  is_active       Boolean   @default(true)
   created_at      DateTime  @default(now())
   
   // Relations

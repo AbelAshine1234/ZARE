@@ -33,6 +33,16 @@ const productSchema = Joi.object({
       'any.required': 'Stock is required.',
     }),
 
+  price: Joi.number()
+    .precision(2)
+    .min(0.01)
+    .required()
+    .messages({
+      'number.base': 'Price must be a number.',
+      'number.min': 'Price must be greater than 0.',
+      'any.required': 'Price is required.',
+    }),
+
   vendor_id: Joi.number()
     .integer()
     .required()
@@ -55,6 +65,17 @@ const productSchema = Joi.object({
     .messages({
       'number.base': 'Subcategory ID must be a number.',
       'any.required': 'Subcategory ID is required.',
+    }),
+
+  low_stock_threshold: Joi.number()
+    .integer()
+    .min(0)
+    .optional()
+    .default(10)
+    .messages({
+      'number.base': 'Low stock threshold must be a number.',
+      'number.integer': 'Low stock threshold must be an integer.',
+      'number.min': 'Low stock threshold cannot be negative.',
     }),
 
   specs: Joi.array()

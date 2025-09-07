@@ -25,4 +25,5 @@ module.exports = {
   vendor: require('./vendor.routes'),
   user: require('./user.routes'),
   auth: require('./auth.routes'),
+  payout: require('./payout.routes'),
 }; 

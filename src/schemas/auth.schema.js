@@ -30,6 +30,39 @@ const clientRegisterSchema = Joi.object({
   }),
  
 });
+
+const vendorRegisterSchema = Joi.object({
+  name: Joi.string().trim().min(2).max(50).required().messages({
+    'string.empty': 'Name is required.',
+    'string.min': 'Name must be at least 2 characters.',
+    'string.max': 'Name must be at most 50 characters.',
+    'any.required': 'Name is required.'
+  }),
+  phone_number: Joi.string().pattern(/^\+?[0-9]{9,15}$/).required().messages({
+    'string.empty': 'Phone number is required.',
+    'string.pattern.base': 'Phone number must be a valid international format.',
+    'any.required': 'Phone number is required.'
+  }),
+
+  password: Joi.string().min(6).max(64).required().messages({
+    'string.empty': 'Password is required.',
+    'string.min': 'Password must be at least 6 characters.',
+    'string.max': 'Password must be at most 64 characters.',
+    'any.required': 'Password is required.'
+  }),
+
+  email: Joi.string().email().optional().messages({
+    'string.email': 'Email must be a valid email address.'
+  }),
+
+  // picture: Joi.string().uri().optional().messages({
+  // 'string.uri': 'Picture must be a valid URL.',
+// }),
+
+
+})
+
+
 const adminRegisterSchema = Joi.object({
   name: Joi.string().trim().min(2).max(50).required().messages({
     'string.empty': 'Name is required.',
@@ -100,6 +133,24 @@ const resendOtpSchema = Joi.object({
   channel: Joi.string().valid('sms', 'whatsapp').default('sms')
 });
 
+const forgotPasswordSchema = Joi.object({
+  phone_number: Joi.string()
+    .pattern(/^\+?\d{10,15}$/)
+    .required()
+    .messages({
+      'string.empty': 'Phone number is required',
+      'string.pattern.base': 'Enter a valid phone number',
+    }),
+});
+
+const resetPasswordSchema = Joi.object({
+  new_password: Joi.string().min(6).required().messages({
+    'string.empty': 'Password is required.',
+    'any.required': 'Password is required.',
+    'string.min': 'Password must be at least 6 characters.'
+  })
+});
+
 const driverRegisterSchema = Joi.object({
   name: Joi.string().trim().min(2).max(50).required().messages({
     'string.empty': 'Name is required.',
@@ -138,4 +189,4 @@ const driverRegisterSchema = Joi.object({
 });
 
  
-module.exports = { clientRegisterSchema, loginSchema ,adminRegisterSchema, verifyOtpSchema, resendOtpSchema,driverRegisterSchema}; 
+module.exports = { resetPasswordSchema, clientRegisterSchema,vendorRegisterSchema, loginSchema ,forgotPasswordSchema, adminRegisterSchema, verifyOtpSchema, resendOtpSchema,driverRegisterSchema}; 

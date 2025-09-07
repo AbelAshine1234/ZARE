@@ -7,7 +7,9 @@
     "start": "nodemon src/index.js",
     "dev": "nodemon src/index.js",
     "worker": "node src/workers/queue.worker.js",
-    "worker:dev": "nodemon src/workers/queue.worker.js"
+    "worker:dev": "nodemon src/workers/queue.worker.js",
+    "seed": "node seed-orders.js",
+    "seed:reset": "npx prisma migrate reset --force && node seed-orders.js"
   },
   "keywords": [
     "zareshop",

@@ -95,7 +95,7 @@ const createVendor = async (req, res, type, imageFields) => {
         ...(uploadedImages.cover_image && { cover_image: { create: { image_url: uploadedImages.cover_image.url } } }),
         ...(uploadedImages.fayda_image && { fayda_image: { create: { image_url: uploadedImages.fayda_image?.url } } }),
         ...(uploadedImages.business_license_image && { business_license_image: { create: { image_url: uploadedImages.business_license_image.url } } }),
-        paymentMethods: { create: { ...payment_method } },
+        // paymentMethods: { create: { ...payment_method } },
         user: { connect: { id: user_id } },
         subscription: { connect: { id: subscription_id } },
       },
@@ -235,6 +235,17 @@ const getUserVendorStatus = async (req, res) => {
         type: true,
         is_approved: true,
         status: true,
+        vendorCategories: { 
+          include: { 
+            category: {
+              select: {
+                id: true,
+                name: true,
+                description: true
+              }
+            } 
+          } 
+        },
       }
     });
 
@@ -254,6 +265,11 @@ const getUserVendorStatus = async (req, res) => {
         isApproved: vendor.is_approved,
         status: vendor.status,
         createdAt: vendor.created_at,
+        categories: vendor.vendorCategories.map(vc => ({
+          id: vc.category.id,
+          name: vc.category.name,
+          description: vc.category.description
+        }))
       }
     });
 
@@ -368,6 +384,65 @@ const deleteVendor = async (req, res) => {
   }
 };
 
+// Get vendor by phone number
+const getVendorByPhone = async (req, res) => {
+  try {
+    const { phoneNumber } = req.params;
+
+    const vendor = await prisma.vendor.findFirst({
+      where: {
+        user: {
+          phone_number: phoneNumber
+        }
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone_number: true,
+            type: true,
+            is_verified: true,
+            isotpVerified: true
+          }
+        }
+      }
+    });
+
+    if (!vendor) {
+      return res.status(404).json({ 
+        error: "Vendor not found with this phone number" 
+      });
+    }
+
+    return res.status(200).json({
+      message: "Vendor retrieved successfully",
+      vendor: {
+        id: vendor.id,
+        name: vendor.name,
+        type: vendor.type,
+        description: vendor.description,
+        status: vendor.status,
+        is_approved: vendor.is_approved,
+        subscription_id: vendor.subscription_id,
+        user_id: vendor.user_id,
+        wallet_id: vendor.wallet_id,
+        rating_id: vendor.rating_id
+      },
+      user: vendor.user
+    });
+
+  } catch (error) {
+    console.error("Error in getVendorByPhone controller:", error);
+    return res.status(500).json({ 
+      message: "Failed to retrieve vendor", 
+      error: error.message 
+    });
+  }
+};
+
 module.exports.updateVendorStatus = updateVendorStatus;
 module.exports.updateVendorApproval = updateVendorApproval;
 module.exports.deleteVendor = deleteVendor;
+module.exports.getVendorByPhone = getVendorByPhone;

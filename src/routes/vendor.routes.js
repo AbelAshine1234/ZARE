@@ -17,8 +17,8 @@ router.post(
     { name: 'fayda_image', maxCount: 1 },
   ]),
   rootValidation,
-  // validateFileExistsObjects('cover_image'),
-  // validateFileExistsObjects('fayda_image'),
+  validateFileExistsObjects('cover_image'),
+  validateFileExistsObjects('fayda_image'),
 
   jsonFieldsParser(['category_ids', 'keepImages','payment_method']), 
 
@@ -63,5 +63,8 @@ router.patch('/approve', authorizeAdmin, validateBody(vendorApprovalSchema), ven
 router.delete('/', validateBody(vendorDeleteSchema), vendorController.deleteVendor);
 // - Admin delete by id in path
 router.delete('/:id', authorizeAdmin, vendorController.deleteVendor);
+
+// 4) Get vendor by phone number
+router.get('/by-phone/:phoneNumber', vendorController.getVendorByPhone);
 
 module.exports = router;

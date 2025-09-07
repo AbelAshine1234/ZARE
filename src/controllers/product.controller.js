@@ -2,6 +2,42 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const { imageUploadQueue, videoUploadQueue } = require("../config/queue.config");
 
+// Stock status calculation function
+const calculateStockStatus = (stock, lowStockThreshold = 10) => {
+  if (stock <= 0) {
+    return 'out_of_stock';
+  } else if (stock <= lowStockThreshold) {
+    return 'low_stock';
+  } else {
+    return 'active';
+  }
+};
+
+// Update stock status for all products (useful for bulk updates)
+const updateAllStockStatus = async () => {
+  try {
+    const products = await prisma.product.findMany({
+      select: { id: true, stock: true, low_stock_threshold: true }
+    });
+
+    const updatePromises = products.map(product => {
+      const stock_status = calculateStockStatus(product.stock, product.low_stock_threshold);
+      const is_active = product.stock > 0;
+      
+      return prisma.product.update({
+        where: { id: product.id },
+        data: { stock_status, is_active }
+      });
+    });
+
+    await Promise.all(updatePromises);
+    console.log(`Updated stock status for ${products.length} products`);
+  } catch (error) {
+    console.error('Error updating stock status:', error);
+    throw error;
+  }
+};
+
 // Generic image uploader with queue processing
 const uploadImages = async (files, fields, productId) => {
   const uploaded = {};
@@ -105,14 +141,18 @@ const createProduct = async (req, res) => {
       vendor_id, 
       category_id, 
       subcategory_id, 
-      specs 
+      price,
+      specs,
+      low_stock_threshold = 10
     } = req.body;
 
     // Convert string values to appropriate types
+    price = Number(price);
     vendor_id = Number(vendor_id);
     category_id = Number(category_id);
     subcategory_id = Number(subcategory_id);
     stock = Number(stock);
+    low_stock_threshold = Number(low_stock_threshold);
     has_discount = has_discount === 'true' || has_discount === true;
 
     // Validate required fields
@@ -120,6 +160,10 @@ const createProduct = async (req, res) => {
     if (isNaN(category_id)) return res.status(400).json({ error: "Invalid category ID" });
     if (isNaN(subcategory_id)) return res.status(400).json({ error: "Invalid subcategory ID" });
     if (isNaN(stock)) return res.status(400).json({ error: "Invalid stock value" });
+    if (isNaN(low_stock_threshold)) return res.status(400).json({ error: "Invalid low stock threshold" });
+    if (stock < 0) return res.status(400).json({ error: "Stock cannot be negative" });
+    if (low_stock_threshold < 0) return res.status(400).json({ error: "Low stock threshold cannot be negative" });
+    if(price<=0) return res.status(400).json({ error: "Price cannot be negative or zero" });
 
     // Check if vendor exists
     const vendorExists = await prisma.vendor.findUnique({ where: { id: vendor_id } });
@@ -205,6 +249,10 @@ const createProduct = async (req, res) => {
       }
     }
 
+    // Calculate stock status
+    const stock_status = calculateStockStatus(stock, low_stock_threshold);
+    const is_active = stock > 0; // Product is active if stock > 0
+
     // Create product with placeholder file references
     const product = await prisma.product.create({
       data: {
@@ -212,10 +260,14 @@ const createProduct = async (req, res) => {
         description,
         has_discount,
         stock,
+        stock_status,
+        low_stock_threshold,
+        is_active,
         vendor: { connect: { id: vendor_id } },
         category: { connect: { id: category_id } },
         subcategory: { connect: { id: subcategory_id } },
         specs: specs?.length ? { create: specs } : undefined,
+        price,
       },
       include: {
         vendor: {
@@ -356,7 +408,7 @@ const createProduct = async (req, res) => {
   }
 };
 
-// Get all products
+// Get all products -- for a specific vendor, specific category
 const getAllProducts = async (req, res) => {
   try {
     const { page = 1, limit = 10, category_id, vendor_id, search } = req.query;
@@ -415,6 +467,66 @@ const getAllProducts = async (req, res) => {
     });
 
     const total = await prisma.product.count({ where });
+
+    return res.status(200).json({
+      products,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit)),
+      },
+    });
+
+  } catch (error) {
+    console.error("Error fetching products:", error);
+    return res.status(500).json({ 
+      message: "Failed to fetch products", 
+      error: error.message 
+    });
+  }
+};
+
+//Get all products by vendor
+const getProductsByVendor = async (req, res) => {
+  try {
+    const { vendor_id } = req.query;
+    const vendorId = Number(vendor_id);
+
+    if (isNaN(vendorId)) {
+      return res.status(400).json({ error: "Invalid vendor ID" });
+    }
+
+    const products = await prisma.product.findMany({
+      where: { vendor_id: vendorId },
+      include: {
+        vendor: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+          }
+        },
+        category: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
+        subcategory: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
+        images: true,
+        videos: true,
+        specs: true,
+        rating: true,
+      },
+    });
+
+    const total = await prisma.product.count({ where: { vendor_id: vendorId } });
 
     return res.status(200).json({
       products,
@@ -506,7 +618,8 @@ const updateProduct = async (req, res) => {
       stock, 
       category_id, 
       subcategory_id, 
-      specs 
+      specs,
+      low_stock_threshold
     } = req.body;
 
     // Check if product exists
@@ -522,6 +635,7 @@ const updateProduct = async (req, res) => {
     if (category_id) category_id = Number(category_id);
     if (subcategory_id) subcategory_id = Number(subcategory_id);
     if (stock) stock = Number(stock);
+    if (low_stock_threshold) low_stock_threshold = Number(low_stock_threshold);
     if (has_discount !== undefined) has_discount = has_discount === 'true' || has_discount === true;
 
     // Validate category and subcategory if provided
@@ -535,6 +649,18 @@ const updateProduct = async (req, res) => {
 
     if (stock && isNaN(stock)) {
       return res.status(400).json({ error: "Invalid stock value" });
+    }
+
+    if (low_stock_threshold && isNaN(low_stock_threshold)) {
+      return res.status(400).json({ error: "Invalid low stock threshold" });
+    }
+
+    if (stock !== undefined && stock < 0) {
+      return res.status(400).json({ error: "Stock cannot be negative" });
+    }
+
+    if (low_stock_threshold !== undefined && low_stock_threshold < 0) {
+      return res.status(400).json({ error: "Low stock threshold cannot be negative" });
     }
 
     // Check if category exists
@@ -570,8 +696,18 @@ const updateProduct = async (req, res) => {
     if (description !== undefined) updateData.description = description;
     if (has_discount !== undefined) updateData.has_discount = has_discount;
     if (stock !== undefined) updateData.stock = stock;
+    if (low_stock_threshold !== undefined) updateData.low_stock_threshold = low_stock_threshold;
     if (category_id) updateData.category = { connect: { id: category_id } };
     if (subcategory_id) updateData.subcategory = { connect: { id: subcategory_id } };
+
+    // Calculate and update stock status if stock or low_stock_threshold changed
+    if (stock !== undefined || low_stock_threshold !== undefined) {
+      const currentStock = stock !== undefined ? stock : existingProduct.stock;
+      const currentThreshold = low_stock_threshold !== undefined ? low_stock_threshold : existingProduct.low_stock_threshold;
+      
+      updateData.stock_status = calculateStockStatus(currentStock, currentThreshold);
+      updateData.is_active = currentStock > 0;
+    }
 
     // Update specs if provided
     if (specs) {
@@ -799,10 +935,166 @@ const deleteProduct = async (req, res) => {
   }
 };
 
+// Get products by stock status
+const getProductsByStockStatus = async (req, res) => {
+  try {
+    const { status } = req.params;
+    const { page = 1, limit = 10, vendor_id } = req.query;
+    
+    const validStatuses = ['active', 'low_stock', 'out_of_stock'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: "Invalid stock status. Must be one of: active, low_stock, out_of_stock" });
+    }
+
+    const pageNum = Number(page);
+    const limitNum = Number(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    const whereClause = {
+      stock_status: status,
+      is_active: status !== 'out_of_stock' // Only show active products unless out of stock
+    };
+
+    if (vendor_id) {
+      whereClause.vendor_id = Number(vendor_id);
+    }
+
+    const [products, total] = await Promise.all([
+      prisma.product.findMany({
+        where: whereClause,
+        include: {
+          vendor: {
+            select: {
+              id: true,
+              name: true,
+              type: true,
+            }
+          },
+          category: {
+            select: {
+              id: true,
+              name: true,
+            }
+          },
+          subcategory: {
+            select: {
+              id: true,
+              name: true,
+            }
+          },
+          images: true,
+          videos: true,
+          specs: true,
+          rating: true,
+        },
+        orderBy: { created_at: 'desc' },
+        skip,
+        take: limitNum,
+      }),
+      prisma.product.count({ where: whereClause })
+    ]);
+
+    const totalPages = Math.ceil(total / limitNum);
+
+    return res.status(200).json({
+      products,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: totalPages,
+      },
+      stock_status: status
+    });
+
+  } catch (error) {
+    console.error("Error fetching products by stock status:", error);
+    return res.status(500).json({ 
+      message: "Failed to fetch products by stock status", 
+      error: error.message 
+    });
+  }
+};
+
+// Get low stock products for vendor
+const getLowStockProducts = async (req, res) => {
+  try {
+    const { vendor_id } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+    
+    const pageNum = Number(page);
+    const limitNum = Number(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    const whereClause = {
+      vendor_id: Number(vendor_id),
+      stock_status: 'low_stock',
+      is_active: true
+    };
+
+    const [products, total] = await Promise.all([
+      prisma.product.findMany({
+        where: whereClause,
+        include: {
+          vendor: {
+            select: {
+              id: true,
+              name: true,
+              type: true,
+            }
+          },
+          category: {
+            select: {
+              id: true,
+              name: true,
+            }
+          },
+          subcategory: {
+            select: {
+              id: true,
+              name: true,
+            }
+          },
+          images: true,
+          specs: true,
+        },
+        orderBy: { created_at: 'desc' },
+        skip,
+        take: limitNum,
+      }),
+      prisma.product.count({ where: whereClause })
+    ]);
+
+    const totalPages = Math.ceil(total / limitNum);
+
+    return res.status(200).json({
+      products,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: totalPages,
+      },
+      message: `Found ${total} products with low stock`
+    });
+
+  } catch (error) {
+    console.error("Error fetching low stock products:", error);
+    return res.status(500).json({ 
+      message: "Failed to fetch low stock products", 
+      error: error.message 
+    });
+  }
+};
+
 module.exports = {
   createProduct,
   getAllProducts,
   getProductById,
+  getProductsByVendor,
   updateProduct,
   deleteProduct,
+  getProductsByStockStatus,
+  getLowStockProducts,
+  updateAllStockStatus,
 };

@@ -40,31 +40,31 @@ const vendorSchema = Joi.object({
       'any.required': 'Category IDs are required.',
     }),
 
-  payment_method: Joi.object({
-    name: Joi.string()
-      .required()
-      .messages({
-        'string.empty': 'Payment method name is required.',
-        'any.required': 'Payment method name is required.',
-      }),
-    account_number: Joi.string()
-      .required()
-      .messages({
-        'string.empty': 'Account number is required.',
-        'any.required': 'Account number is required.',
-      }),
-    account_holder: Joi.string()
-      .required()
-      .messages({
-        'string.empty': 'Account holder name is required.',
-        'any.required': 'Account holder name is required.',
-      }),
-    type: Joi.string()
-      .allow(null, ''),
-    details: Joi.object()
-      .default({}),
-  })
-  .required(),
+  // payment_method: Joi.object({
+  //   name: Joi.string()
+  //     .required()
+  //     .messages({
+  //       'string.empty': 'Payment method name is required.',
+  //       'any.required': 'Payment method name is required.',
+  //     }),
+  //   account_number: Joi.string()
+  //     .required()
+  //     .messages({
+  //       'string.empty': 'Account number is required.',
+  //       'any.required': 'Account number is required.',
+  //     }),
+  //   account_holder: Joi.string()
+  //     .required()
+  //     .messages({
+  //       'string.empty': 'Account holder name is required.',
+  //       'any.required': 'Account holder name is required.',
+  //     }),
+  //   type: Joi.string()
+  //     .allow(null, ''),
+  //   details: Joi.object()
+  //     .default({}),
+  // })
+  // .required(),
 
   subscription_id: Joi.number()
   .integer()
