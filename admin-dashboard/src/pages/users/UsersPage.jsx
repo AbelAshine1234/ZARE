@@ -31,7 +31,7 @@ import {
   FilterList
 } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
-import axios from 'axios';
+import api from '../../utils/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 const UsersPage = () => {
@@ -52,74 +52,13 @@ const UsersPage = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get('/api/users');
+      const response = await api.get('/api/admin/users');
       const payload = Array.isArray(response.data) ? response.data : (response.data?.users || []);
       setUsers(payload);
     } catch (error) {
       console.error('Error fetching users:', error);
-      // Mock data for demonstration
-      setUsers([
-        // current user placeholder for demo
-        currentUser ? {
-          id: currentUser.id || 1,
-          name: currentUser.name || 'Admin',
-          email: currentUser.email || 'admin@example.com',
-          phone_number: currentUser.phone_number || '+0000000000',
-          type: currentUser.type || 'admin',
-          is_verified: !!currentUser.is_verified,
-          created_at: currentUser.created_at || new Date().toISOString(),
-          status: currentUser.status || 'active'
-        } : {
-          id: 1,
-          name: 'Admin',
-          email: 'admin@example.com',
-          phone_number: '+0000000000',
-          type: 'admin',
-          is_verified: true,
-          created_at: new Date().toISOString(),
-          status: 'active'
-        },
-        {
-          id: 2,
-          name: 'Jane Smith',
-          email: 'jane@example.com',
-          phone_number: '+1234567891',
-          type: 'vendor_owner',
-          is_verified: true,
-          created_at: '2024-01-10T14:20:00Z',
-          status: 'active'
-        },
-        {
-          id: 3,
-          name: 'Mike Johnson',
-          email: 'mike@example.com',
-          phone_number: '+1234567892',
-          type: 'driver',
-          is_verified: false,
-          created_at: '2024-01-20T09:15:00Z',
-          status: 'pending'
-        },
-        {
-          id: 4,
-          name: 'Sarah Wilson',
-          email: 'sarah@example.com',
-          phone_number: '+1234567893',
-          type: 'client',
-          is_verified: true,
-          created_at: '2024-01-12T16:45:00Z',
-          status: 'active'
-        },
-        {
-          id: 5,
-          name: 'David Brown',
-          email: 'david@example.com',
-          phone_number: '+1234567894',
-          type: 'employee',
-          is_verified: true,
-          created_at: '2024-01-08T11:30:00Z',
-          status: 'active'
-        }
-      ]);
+      // Set empty array instead of mock data
+      setUsers([]);
     } finally {
       setLoading(false);
     }
