@@ -26,4 +26,5 @@ module.exports = {
   vendor: require('./vendor.controller'),
   user: require('./user.controller'),
   auth: require('./auth.controller'),
+  admin: require('./admin.controller'),
 }; 

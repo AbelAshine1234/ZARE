@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -12,13 +13,15 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Stack,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
   Alert,
   Snackbar,
-  CircularProgress
+  CircularProgress,
+  InputAdornment
 } from '@mui/material';
 import {
   Add,
@@ -31,148 +34,64 @@ import {
   FilterList
 } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
-import axios from 'axios';
+import { usersApi, adminApi } from '../../utils/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 const UsersPage = () => {
   const [users, setUsers] = useState([]);
+  const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [pagination, setPagination] = useState({ page: 0, pageSize: 10, total: 0 });
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({ name: '', phone_number: '', email: '', password: '' });
+  const [createError, setCreateError] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [pwdOpen, setPwdOpen] = useState(false);
+  const [pwdValue, setPwdValue] = useState('');
+
+  // Normalize Ethiopian phone numbers to +2519XXXXXXXX
+  const normalizeEtPhone = (input) => {
+    if (!input) return null;
+    let v = String(input).replace(/\s|-/g, '');
+    if (v.startsWith('+251')) return v; // assume already correct
+    if (v.startsWith('0') && v.length === 10) {
+      // 0XXXXXXXXX -> +251XXXXXXXXX (drop leading 0)
+      return '+251' + v.slice(1);
+    }
+    if (v.length === 9 && v[0] === '9') {
+      // 9XXXXXXXX -> +2519XXXXXXXX
+      return '+251' + v;
+    }
+    return null; // invalid
+  };
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    fetchUsers(pagination.page, pagination.pageSize, filterType);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagination.page, pagination.pageSize, filterType]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (page = 0, pageSize = 10, type = 'all') => {
     try {
-      const response = await axios.get('/api/users');
-      const payload = Array.isArray(response.data) ? response.data : (response.data?.users || []);
-      setUsers(payload);
+      setLoading(true);
+      const res = await usersApi.list(page + 1, pageSize, type !== 'all' ? type : undefined);
+      const list = res.data?.users || [];
+      const total = res.data?.pagination?.total || list.length;
+      setUsers(list);
+      setPagination(prev => ({ ...prev, total }));
     } catch (error) {
       console.error('Error fetching users:', error);
-      // Mock data for demonstration
-      setUsers([
-        // current user placeholder for demo
-        currentUser ? {
-          id: currentUser.id || 1,
-          name: currentUser.name || 'Admin',
-          email: currentUser.email || 'admin@example.com',
-          phone_number: currentUser.phone_number || '+0000000000',
-          type: currentUser.type || 'admin',
-          is_verified: !!currentUser.is_verified,
-          created_at: currentUser.created_at || new Date().toISOString(),
-          status: currentUser.status || 'active'
-        } : {
-          id: 1,
-          name: 'Admin',
-          email: 'admin@example.com',
-          phone_number: '+0000000000',
-          type: 'admin',
-          is_verified: true,
-          created_at: new Date().toISOString(),
-          status: 'active'
-        },
-        {
-          id: 2,
-          name: 'Jane Smith',
-          email: 'jane@example.com',
-          phone_number: '+1234567891',
-          type: 'vendor_owner',
-          is_verified: true,
-          created_at: '2024-01-10T14:20:00Z',
-          status: 'active'
-        },
-        {
-          id: 3,
-          name: 'Mike Johnson',
-          email: 'mike@example.com',
-          phone_number: '+1234567892',
-          type: 'driver',
-          is_verified: false,
-          created_at: '2024-01-20T09:15:00Z',
-          status: 'pending'
-        },
-        {
-          id: 4,
-          name: 'Sarah Wilson',
-          email: 'sarah@example.com',
-          phone_number: '+1234567893',
-          type: 'client',
-          is_verified: true,
-          created_at: '2024-01-12T16:45:00Z',
-          status: 'active'
-        },
-        {
-          id: 5,
-          name: 'David Brown',
-          email: 'david@example.com',
-          phone_number: '+1234567894',
-          type: 'employee',
-          is_verified: true,
-          created_at: '2024-01-08T11:30:00Z',
-          status: 'active'
-        }
-      ]);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEditUser = (user) => {
-    setSelectedUser(user);
-    setDialogOpen(true);
-  };
-
-  const handleDeleteUser = (user) => {
-    setSelectedUser(user);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleSaveUser = async () => {
-    try {
-      if (selectedUser.id) {
-        await axios.put(`/api/users/${selectedUser.id}`, selectedUser);
-        setSnackbar({ open: true, message: 'User updated successfully', severity: 'success' });
-      } else {
-        await axios.post('/api/users', selectedUser);
-        setSnackbar({ open: true, message: 'User created successfully', severity: 'success' });
-      }
-      setDialogOpen(false);
-      setSelectedUser(null);
-      fetchUsers();
-    } catch (error) {
-      setSnackbar({ open: true, message: 'Error saving user', severity: 'error' });
-    }
-  };
-
-  const handleDeleteConfirm = async () => {
-    try {
-      await axios.delete(`/api/users/${selectedUser.id}`);
-      setSnackbar({ open: true, message: 'User deleted successfully', severity: 'success' });
-      setDeleteDialogOpen(false);
-      setSelectedUser(null);
-      fetchUsers();
-    } catch (error) {
-      setSnackbar({ open: true, message: 'Error deleting user', severity: 'error' });
-    }
-  };
-
-  const handleStatusChange = async (userId, newStatus) => {
-    try {
-      await axios.patch(`/api/users/${userId}/status`, { status: newStatus });
-      setSnackbar({ open: true, message: 'User status updated successfully', severity: 'success' });
-      fetchUsers();
-    } catch (error) {
-      setSnackbar({ open: true, message: 'Error updating user status', severity: 'error' });
-    }
-  };
+  // UI-only for now; edit/delete/status actions are disabled until backend endpoints are provided consistently.
 
   const getTypeColor = (type) => {
     switch (type) {
@@ -191,18 +110,7 @@ const UsersPage = () => {
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'active':
-        return 'success';
-      case 'pending':
-        return 'warning';
-      case 'suspended':
-        return 'error';
-      default:
-        return 'default';
-    }
-  };
+  
 
   const columns = [
     {
@@ -254,18 +162,7 @@ const UsersPage = () => {
         />
       ),
     },
-    {
-      field: 'status',
-      headerName: 'Status',
-      width: 120,
-      renderCell: (params) => (
-        <Chip
-          label={params.value}
-          color={getStatusColor(params.value)}
-          size="small"
-        />
-      ),
-    },
+    // Status column hidden until backend supports it uniformly on users
     {
       field: 'created_at',
       headerName: 'Created',
@@ -279,53 +176,14 @@ const UsersPage = () => {
     {
       field: 'actions',
       headerName: 'Actions',
-      width: 200,
+      width: 120,
       renderCell: (params) => (
         <Box>
           <Tooltip title="View Details">
-            <IconButton size="small" color="primary">
+            <IconButton size="small" color="primary" onClick={() => navigate(`/users/${params.row.id}/detail`)}>
               <Visibility />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Edit User">
-            <IconButton 
-              size="small" 
-              color="warning"
-              onClick={() => handleEditUser(params.row)}
-            >
-              <Edit />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Delete User">
-            <IconButton 
-              size="small" 
-              color="error"
-              onClick={() => handleDeleteUser(params.row)}
-            >
-              <Delete />
-            </IconButton>
-          </Tooltip>
-          {params.row.status === 'active' ? (
-            <Tooltip title="Suspend User">
-              <IconButton 
-                size="small" 
-                color="warning"
-                onClick={() => handleStatusChange(params.row.id, 'suspended')}
-              >
-                <Block />
-              </IconButton>
-            </Tooltip>
-          ) : (
-            <Tooltip title="Activate User">
-              <IconButton 
-                size="small" 
-                color="success"
-                onClick={() => handleStatusChange(params.row.id, 'active')}
-              >
-                <CheckCircle />
-              </IconButton>
-            </Tooltip>
-          )}
         </Box>
       ),
     },
@@ -335,11 +193,8 @@ const UsersPage = () => {
     const matchesSearch = user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.phone_number?.includes(searchTerm);
-    
-    const matchesType = filterType === 'all' || user.type === filterType;
     const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
-    
-    return matchesSearch && matchesType && matchesStatus;
+    return matchesSearch && matchesStatus;
   });
 
   if (loading) {
@@ -359,19 +214,9 @@ const UsersPage = () => {
         <Button
           variant="contained"
           startIcon={<Add />}
-          onClick={() => {
-            setSelectedUser({
-              name: '',
-              email: '',
-              phone_number: '',
-              type: 'client',
-              is_verified: false,
-              status: 'active'
-            });
-            setDialogOpen(true);
-          }}
+          onClick={() => { setCreateError(''); setCreateOpen(true); }}
         >
-          Add New User
+          Create Client
         </Button>
       </Box>
 
@@ -425,8 +270,12 @@ const UsersPage = () => {
         <DataGrid
           rows={Array.isArray(filteredUsers) ? filteredUsers : []}
           columns={columns}
-          pageSize={10}
-          rowsPerPageOptions={[10, 25, 50]}
+          pagination
+          paginationMode="server"
+          rowCount={pagination.total}
+          paginationModel={{ page: pagination.page, pageSize: pagination.pageSize }}
+          onPaginationModelChange={(model) => setPagination(model)}
+          pageSizeOptions={[10, 25, 50]}
           checkboxSelection
           disableSelectionOnClick
           sx={{
@@ -437,79 +286,78 @@ const UsersPage = () => {
         />
       </Paper>
 
-      {/* Edit/Create User Dialog */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {selectedUser?.id ? 'Edit User' : 'Create New User'}
-        </DialogTitle>
+      {/* Edit/Delete dialogs removed for now to simplify and avoid unsupported endpoints */}
+
+      {/* Create Client Dialog */}
+      <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Create Client</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-            <TextField
-              label="Name"
-              value={selectedUser?.name || ''}
-              onChange={(e) => setSelectedUser({ ...selectedUser, name: e.target.value })}
-              fullWidth
-            />
-            <TextField
-              label="Email"
-              type="email"
-              value={selectedUser?.email || ''}
-              onChange={(e) => setSelectedUser({ ...selectedUser, email: e.target.value })}
-              fullWidth
-            />
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            {createError && (
+              <Typography variant="body2" color="error">{createError}</Typography>
+            )}
+            <TextField label="Name" fullWidth value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} />
             <TextField
               label="Phone Number"
-              value={selectedUser?.phone_number || ''}
-              onChange={(e) => setSelectedUser({ ...selectedUser, phone_number: e.target.value })}
               fullWidth
+              helperText="Ethiopia only. Enter 9 digits after +251."
+              value={createForm.phone_number}
+              onChange={(e) => {
+                const digits = (e.target.value || '').replace(/\D/g, '').slice(0, 9);
+                setCreateForm({ ...createForm, phone_number: digits });
+              }}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">+251</InputAdornment>,
+                inputMode: 'numeric',
+              }}
             />
-            <FormControl fullWidth>
-              <InputLabel>Type</InputLabel>
-              <Select
-                value={selectedUser?.type || 'client'}
-                label="Type"
-                onChange={(e) => setSelectedUser({ ...selectedUser, type: e.target.value })}
-              >
-                <MenuItem value="client">Client</MenuItem>
-                <MenuItem value="vendor_owner">Vendor Owner</MenuItem>
-                <MenuItem value="driver">Driver</MenuItem>
-                <MenuItem value="employee">Employee</MenuItem>
-                <MenuItem value="admin">Admin</MenuItem>
-              </Select>
-            </FormControl>
-            <FormControl fullWidth>
-              <InputLabel>Status</InputLabel>
-              <Select
-                value={selectedUser?.status || 'active'}
-                label="Status"
-                onChange={(e) => setSelectedUser({ ...selectedUser, status: e.target.value })}
-              >
-                <MenuItem value="active">Active</MenuItem>
-                <MenuItem value="pending">Pending</MenuItem>
-                <MenuItem value="suspended">Suspended</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
+            <TextField label="Email (optional)" type="email" fullWidth helperText="Optional" value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} />
+            <TextField label="Password" type="password" fullWidth value={createForm.password} onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })} />
+          </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleSaveUser} variant="contained">Save</Button>
+          <Button onClick={() => setCreateOpen(false)}>Cancel</Button>
+          <Button variant="contained" disabled={creating} onClick={async () => {
+            try {
+              setCreateError('');
+              const fullPhone = '+251' + (createForm.phone_number || '');
+              const normalized = normalizeEtPhone(fullPhone);
+              if (!normalized || (createForm.phone_number || '').length !== 9 || !createForm.password) {
+                setCreateError('Enter a valid Ethiopian phone (9 digits after +251) and password');
+                return;
+              }
+              setCreating(true);
+              const resp = await adminApi.createClient({
+                name: createForm.name,
+                phone_number: normalized,
+                email: createForm.email,
+                password: createForm.password,
+              });
+              const dp = resp?.data?.defaultPassword;
+              if (dp) { setPwdValue(dp); setPwdOpen(true); }
+              setCreateOpen(false);
+              setCreateForm({ name: '', phone_number: '', email: '', password: '' });
+              // Refresh list
+              fetchUsers(pagination.page, pagination.pageSize, filterType);
+              setSnackbar({ open: true, message: 'Client created successfully', severity: 'success' });
+            } catch (e) {
+              setCreateError(e?.response?.data?.error || e.message || 'Failed to create client');
+            } finally {
+              setCreating(false);
+            }
+          }}>Create</Button>
         </DialogActions>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Confirm Delete</DialogTitle>
+      {/* Default password dialog */}
+      <Dialog open={pwdOpen} onClose={() => setPwdOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Default Password</DialogTitle>
         <DialogContent>
-          <Typography>
-            Are you sure you want to delete user "{selectedUser?.name}"? This action cannot be undone.
-          </Typography>
+          <Typography variant="body2" sx={{ mb: 1 }}>A default password was generated for this user. Please save it permanently.</Typography>
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>"{pwdValue}"</Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
-            Delete
-          </Button>
+          <Button variant="contained" onClick={() => setPwdOpen(false)}>I Saved It</Button>
         </DialogActions>
       </Dialog>
 

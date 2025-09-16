@@ -29,7 +29,7 @@ import {
   Delete
 } from '@mui/icons-material';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
-import axios from 'axios';
+import api from '../../utils/api';
 
 const DashboardPage = () => {
   const [stats, setStats] = useState({
@@ -52,32 +52,26 @@ const DashboardPage = () => {
   const fetchDashboardData = async () => {
     try {
       // Fetch dashboard statistics
-      const statsResponse = await axios.get('/api/admin/dashboard/stats');
+      const statsResponse = await api.get('/api/admin/dashboard/stats');
       setStats(statsResponse.data);
 
       // Fetch recent orders
-      const ordersResponse = await axios.get('/api/admin/dashboard/recent-orders');
+      const ordersResponse = await api.get('/api/admin/dashboard/recent-orders');
       setRecentOrders(ordersResponse.data);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      // Set mock data for demonstration
+      // Set empty data instead of mock data
       setStats({
-        totalUsers: 1247,
-        totalVendors: 89,
-        totalProducts: 2156,
-        totalOrders: 3421,
-        totalRevenue: 1250000,
-        pendingDeliveries: 23,
-        activeDrivers: 45,
-        pendingCashouts: 12
+        totalUsers: 0,
+        totalVendors: 0,
+        totalProducts: 0,
+        totalOrders: 0,
+        totalRevenue: 0,
+        pendingDeliveries: 0,
+        activeDrivers: 0,
+        pendingCashouts: 0
       });
-      setRecentOrders([
-        { id: 1, customer: 'John Doe', vendor: 'Tech Store', amount: 250, status: 'processing' },
-        { id: 2, customer: 'Jane Smith', vendor: 'Fashion Hub', amount: 180, status: 'delivered' },
-        { id: 3, customer: 'Mike Johnson', vendor: 'Home Goods', amount: 320, status: 'pending' },
-        { id: 4, customer: 'Sarah Wilson', vendor: 'Electronics Plus', amount: 450, status: 'processing' },
-        { id: 5, customer: 'David Brown', vendor: 'Sports World', amount: 120, status: 'delivered' }
-      ]);
+      setRecentOrders([]);
     } finally {
       setLoading(false);
     }
@@ -140,21 +134,16 @@ const DashboardPage = () => {
     }
   };
 
+  // Use real data from stats instead of mock data
   const chartData = [
-    { name: 'Jan', users: 400, orders: 240, revenue: 2400 },
-    { name: 'Feb', users: 300, orders: 139, revenue: 2210 },
-    { name: 'Mar', users: 200, orders: 980, revenue: 2290 },
-    { name: 'Apr', users: 278, orders: 390, revenue: 2000 },
-    { name: 'May', users: 189, orders: 480, revenue: 2181 },
-    { name: 'Jun', users: 239, orders: 380, revenue: 2500 },
-    { name: 'Jul', users: 349, orders: 430, revenue: 2100 },
+    { name: 'Current', users: stats.totalUsers, orders: stats.totalOrders, revenue: stats.totalRevenue },
   ];
 
   const pieData = [
-    { name: 'Clients', value: 65, color: '#8884d8' },
-    { name: 'Vendors', value: 20, color: '#82ca9d' },
-    { name: 'Drivers', value: 10, color: '#ffc658' },
-    { name: 'Employees', value: 5, color: '#ff7300' },
+    { name: 'Users', value: stats.totalUsers, color: '#8884d8' },
+    { name: 'Vendors', value: stats.totalVendors, color: '#82ca9d' },
+    { name: 'Drivers', value: stats.activeDrivers, color: '#ffc658' },
+    { name: 'Products', value: stats.totalProducts, color: '#ff7300' },
   ];
 
   if (loading) {

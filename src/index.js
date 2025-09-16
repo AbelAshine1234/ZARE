@@ -39,6 +39,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/api/users', routes.user);
 app.use('/api/vendors', routes.vendor);
 app.use('/api/auth', routes.auth);
+app.use('/api/admin', routes.admin);
 app.use('/api/category', routes.category);
 app.use('/api/subcategory', routes.subcategory);
 app.use('/api/subscription', routes.subscription);

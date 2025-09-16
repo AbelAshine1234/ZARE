@@ -183,6 +183,15 @@ const createVendor = async (req, res, type, imageFields) => {
       },
     });
 
+    // Create initial vendor note automatically
+    await prisma.vendorNote.create({
+      data: {
+        vendor_id: vendor.id,
+        title: 'Vendor Created',
+        description: 'Initial note generated automatically when the vendor was created.'
+      }
+    });
+
     // Only return URLs for images
     const cleanVendor = {
       ...updatedVendor,

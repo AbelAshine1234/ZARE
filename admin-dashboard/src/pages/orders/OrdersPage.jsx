@@ -22,7 +22,7 @@ import {
 } from '@mui/material';
 import { Search, Visibility } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
-import axios from 'axios';
+import api from '../../utils/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 const OrdersPage = () => {
@@ -41,52 +41,13 @@ const OrdersPage = () => {
 
   const fetchOrders = async () => {
     try {
-      const response = await axios.get('/api/orders');
-      setOrders(response.data);
+      const response = await api.get('/api/admin/orders');
+      const payload = Array.isArray(response.data) ? response.data : (response.data?.orders || []);
+      setOrders(payload);
     } catch (error) {
-      // Fallback mock data for development
-      setOrders([
-        {
-          id: 1,
-          order_number: 'ORD-0001',
-          customer_name: currentUser?.name || 'Customer',
-          customer_phone: '+1234567890',
-          status: 'processing',
-          total_amount: 149.99,
-          payment_method: 'card',
-          created_at: '2024-01-15T10:30:00Z'
-        },
-        {
-          id: 2,
-          order_number: 'ORD-0002',
-          customer_name: 'Jane Smith',
-          customer_phone: '+1987654321',
-          status: 'pending',
-          total_amount: 89.0,
-          payment_method: 'cash_on_delivery',
-          created_at: '2024-01-16T12:10:00Z'
-        },
-        {
-          id: 3,
-          order_number: 'ORD-0003',
-          customer_name: 'Mike Johnson',
-          customer_phone: '+1122334455',
-          status: 'delivered',
-          total_amount: 245.75,
-          payment_method: 'card',
-          created_at: '2024-01-17T09:20:00Z'
-        },
-        {
-          id: 4,
-          order_number: 'ORD-0004',
-          customer_name: 'Sarah Wilson',
-          customer_phone: '+1098765432',
-          status: 'cancelled',
-          total_amount: 39.99,
-          payment_method: 'wallet',
-          created_at: '2024-01-18T15:45:00Z'
-        }
-      ]);
+      console.error('Error fetching orders:', error);
+      // Set empty array instead of mock data
+      setOrders([]);
     } finally {
       setLoading(false);
     }
