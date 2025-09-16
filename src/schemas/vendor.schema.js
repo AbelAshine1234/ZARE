@@ -74,6 +74,14 @@ const vendorSchema = Joi.object({
     'any.required': 'Subscription ID is required.',
   }),
 
+  // Optional: used by admin to assign vendor owner
+  owner_user_id: Joi.number()
+    .integer()
+    .optional()
+    .messages({
+      'number.base': 'owner_user_id must be a number.',
+      'number.integer': 'owner_user_id must be an integer.'
+    }),
 
   keepImages: Joi.string()
     .optional()

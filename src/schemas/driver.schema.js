@@ -15,10 +15,10 @@ const driverRegistrationSchema = Joi.object({
     }),
 
   phone_number: Joi.string()
-    .pattern(/^\+?[1-9]\d{1,14}$/)
+    .pattern(/^\+2519\d{8}$/)
     .required()
     .messages({
-      'string.pattern.base': 'Phone number must be a valid international format.',
+      'string.pattern.base': 'Phone number must be Ethiopian format: +2519XXXXXXXX.',
       'any.required': 'Phone number is required.',
     }),
 
@@ -74,10 +74,10 @@ const adminDriverCreationSchema = Joi.object({
     }),
 
   phone_number: Joi.string()
-    .pattern(/^\+?[1-9]\d{1,14}$/)
+    .pattern(/^\+2519\d{8}$/)
     .required()
     .messages({
-      'string.pattern.base': 'Phone number must be a valid international format.',
+      'string.pattern.base': 'Phone number must be Ethiopian format: +2519XXXXXXXX.',
       'any.required': 'Phone number is required.',
     }),
 

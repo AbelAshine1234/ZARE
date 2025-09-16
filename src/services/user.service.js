@@ -149,6 +149,28 @@ const getAllUsersService = () => prisma.user.findMany();
  */
 const getUserByIdService = (id) => prisma.user.findUnique({
   where: { id: parseInt(id) },
+  include: {
+    wallet: true,
+    paymentMethods: true,
+    client: { include: { wallet: true, image: true } },
+    vendor: {
+      include: {
+        wallet: true,
+        subscription: true,
+        vendorCategories: { include: { category: true } },
+      }
+    },
+    driver: {
+      include: {
+        wallet: true,
+        profile_image: true,
+        license_image: true,
+        fayda_image: true,
+        deliveries: { take: 5, orderBy: { id: 'desc' } }
+      }
+    },
+    employee: { include: { vendor: true } },
+  }
 });
 
 /**

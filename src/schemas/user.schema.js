@@ -10,12 +10,12 @@ const userSchema = Joi.object({
     }),
 
   phone_number: Joi.string()
-    .pattern(/^\+?[0-9]{9,15}$/)
+    .pattern(/^\+2519\d{8}$/)
     .required()
     .messages({
       'string.empty': 'Phone number is required.',
       'any.required': 'Phone number is required.',
-      'string.pattern.base': 'Phone number must be a valid international format.'
+      'string.pattern.base': 'Phone number must be Ethiopian format: +2519XXXXXXXX.'
     }),
 
   picture: Joi.string()
