@@ -101,7 +101,11 @@ const vendorsSlice = createSlice({
       })
       .addCase(fetchVendors.fulfilled, (state, action) => {
         state.loading = false;
-        state.items = action.payload;
+        // Ensure isApproved boolean is present even if backend field name differs
+        state.items = (action.payload || []).map(v => ({
+          ...v,
+          isApproved: v?.isApproved ?? (v?.is_approved === true)
+        }));
       })
       .addCase(fetchVendors.rejected, (state, action) => {
         state.loading = false;

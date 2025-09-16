@@ -13,7 +13,10 @@ import DashboardPage from './pages/dashboard/DashboardPage';
 
 // User Management Pages
 import UsersPage from './pages/users/UsersPage';
+import ClientsPage from './pages/users/ClientsPage';
+import UserDetailPage from './pages/users/UserDetailPage';
 import VendorsPage from './pages/users/VendorsPage';
+import VendorOwnersPage from './pages/users/VendorOwnersPage';
 import VendorDetailPage from './pages/users/VendorDetailPage';
 import VendorImagesPage from './pages/users/VendorImagesPage';
 import VendorNotesPage from './pages/users/VendorNotesPage';
@@ -50,6 +53,7 @@ import ChatPage from './pages/communication/ChatPage';
 import SubscriptionsPage from './pages/settings/SubscriptionsPage';
 import SubscriptionDetailPage from './pages/settings/SubscriptionDetailPage';
 import PaymentMethodsPage from './pages/settings/PaymentMethodsPage';
+import AnalyticsPage from './pages/analytics/AnalyticsPage';
 
 // Context
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -98,11 +102,15 @@ function AppRoutes() {
           <AdminLayout />
         </ProtectedRoute>
       }>
-        <Route index element={<DashboardPage />} />
+        {/* Make AnalyticsPage the default landing page */}
+        <Route index element={<AnalyticsPage />} />
         
         {/* User Management */}
         <Route path="users" element={<UsersPage />} />
+        <Route path="clients" element={<ClientsPage />} />
+        <Route path="users/:id/detail" element={<UserDetailPage />} />
         <Route path="vendors" element={<VendorsPage />} />
+        <Route path="vendor-owners" element={<VendorOwnersPage />} />
         <Route path="vendors/:id" element={<VendorDetailPage />} />
         <Route path="vendors/:id/notes" element={<VendorNotesPage />} />
         <Route path="vendors/:id/payment-methods" element={<VendorPaymentMethodsPage />} />
@@ -129,6 +137,9 @@ function AppRoutes() {
         <Route path="transactions" element={<TransactionsPage />} />
         <Route path="cashout-requests" element={<CashOutRequestsPage />} />
         <Route path="refunds" element={<RefundsPage />} />
+
+        {/* Analytics */}
+        <Route path="analytics-dashboard" element={<AnalyticsPage />} />
         
         {/* Communication */}
         <Route path="complaints" element={<ComplaintsPage />} />

@@ -1,18 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Paper, Typography, TextField, Chip, Tooltip, IconButton, CircularProgress, Button, Dialog, DialogTitle, DialogContent, DialogActions, Stack, FormControl, InputLabel, Select, MenuItem, InputAdornment } from '@mui/material';
+import { Box, Paper, Typography, TextField, Chip, Tooltip, IconButton, CircularProgress, Button, Dialog, DialogTitle, DialogContent, DialogActions, Stack, InputAdornment } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import { Search, Visibility } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { adminApi } from '../../utils/api';
+import { usersApi, adminApi } from '../../utils/api';
 
-const DriversPage = () => {
+export default function VendorOwnersPage() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({ page: 0, pageSize: 10, total: 0 });
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', phone_number: '', email: '', password: '', current_status: 'available' });
+  const [form, setForm] = useState({ name: '', phone_number: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
 
@@ -30,13 +30,13 @@ const DriversPage = () => {
     const load = async () => {
       try {
         setLoading(true);
-        const res = await adminApi.drivers(pagination.page + 1, pagination.pageSize);
-        const list = res.data?.drivers || [];
+        const res = await usersApi.list(pagination.page + 1, pagination.pageSize, 'vendor_owner');
+        const list = res.data?.users || [];
         const total = res.data?.pagination?.total || list.length;
         setRows(list);
         setPagination((p) => ({ ...p, total }));
       } catch (e) {
-        console.error('Failed to load drivers', e);
+        console.error('Failed to load vendor owners', e);
         setRows([]);
       } finally {
         setLoading(false);
@@ -48,33 +48,31 @@ const DriversPage = () => {
   const columns = [
     { field: 'id', headerName: 'ID', width: 70 },
     {
-      field: 'user_name',
+      field: 'name',
       headerName: 'Name',
-      width: 180,
-      valueGetter: (params) => params.row.user?.name || '',
+      width: 200,
       renderCell: (params) => (
         <Box>
-          <Typography variant="body2" fontWeight="medium">{params.row.user?.name || '-'}</Typography>
-          <Typography variant="caption" color="text.secondary">{params.row.user?.email || ''}</Typography>
+          <Typography variant="body2" fontWeight="medium">{params.value}</Typography>
+          <Typography variant="caption" color="text.secondary">{params.row.email}</Typography>
         </Box>
       )
     },
-    { field: 'phone', headerName: 'Phone', width: 140, valueGetter: (p) => p.row.user?.phone_number || '' },
+    { field: 'phone_number', headerName: 'Phone', width: 160 },
     {
       field: 'is_verified',
       headerName: 'Verified',
       width: 110,
-      valueGetter: (p) => p.row.user?.is_verified,
       renderCell: (params) => (
         <Chip size="small" label={params.value ? 'Yes' : 'No'} color={params.value ? 'success' : 'default'} />
       )
     },
     {
-      field: 'current_status',
-      headerName: 'Status',
-      width: 130,
+      field: 'created_at',
+      headerName: 'Created',
+      width: 140,
       renderCell: (params) => (
-        <Chip size="small" label={params.row.current_status} />
+        <Typography variant="body2">{params.value ? new Date(params.value).toLocaleDateString() : '-'}</Typography>
       )
     },
     {
@@ -83,7 +81,7 @@ const DriversPage = () => {
       width: 120,
       renderCell: (params) => (
         <Tooltip title="View Details">
-          <IconButton size="small" color="primary" onClick={() => navigate(`/users/${params.row.user?.id || params.row.id}/detail`)}>
+          <IconButton size="small" color="primary" onClick={() => navigate(`/users/${params.row.id}/detail`)}>
             <Visibility />
           </IconButton>
         </Tooltip>
@@ -91,10 +89,10 @@ const DriversPage = () => {
     }
   ];
 
-  const filtered = rows.filter((r) =>
-    (r.user?.name || '').toLowerCase().includes(search.toLowerCase()) ||
-    (r.user?.email || '').toLowerCase().includes(search.toLowerCase()) ||
-    (r.user?.phone_number || '').includes(search)
+  const filtered = rows.filter((u) =>
+    (u.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (u.email || '').toLowerCase().includes(search.toLowerCase()) ||
+    (u.phone_number || '').includes(search)
   );
 
   if (loading) {
@@ -108,16 +106,16 @@ const DriversPage = () => {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5" fontWeight={600}>Drivers</Typography>
+        <Typography variant="h5" fontWeight={600}>Vendor Owners</Typography>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
           <TextField
-            placeholder="Search drivers..."
+            placeholder="Search vendor owners..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             InputProps={{ startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} /> }}
             sx={{ minWidth: 300 }}
           />
-          <Button variant="contained" onClick={() => { setError(''); setOpen(true); }}>Create Driver</Button>
+          <Button variant="contained" onClick={() => { setError(''); setOpen(true); }}>Create Vendor Owner</Button>
         </Box>
       </Box>
 
@@ -134,9 +132,10 @@ const DriversPage = () => {
           disableSelectionOnClick
         />
       </Paper>
-      {/* Create Driver Dialog */}
+
+      {/* Create Vendor Owner Dialog */}
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Create Driver</DialogTitle>
+        <DialogTitle>Create Vendor Owner</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
             {error && (<Typography variant="body2" color="error">{error}</Typography>)}
@@ -157,14 +156,6 @@ const DriversPage = () => {
             />
             <TextField label="Email (optional)" type="email" fullWidth helperText="Optional" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
             <TextField label="Password" type="password" fullWidth value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
-            <FormControl fullWidth>
-              <InputLabel>Status</InputLabel>
-              <Select value={form.current_status} label="Status" onChange={(e) => setForm({ ...form, current_status: e.target.value })}>
-                <MenuItem value="available">available</MenuItem>
-                <MenuItem value="on_delivery">on_delivery</MenuItem>
-                <MenuItem value="offline">offline</MenuItem>
-              </Select>
-            </FormControl>
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -176,17 +167,17 @@ const DriversPage = () => {
               const normalized = normalizeEtPhone(fullPhone);
               if (!normalized || (form.phone_number || '').length !== 9) { setError('Enter a valid Ethiopian phone (9 digits after +251)'); return; }
               setCreating(true);
-              await adminApi.createDriver({ ...form, phone_number: normalized });
+              await adminApi.createVendorOwner({ ...form, phone_number: normalized });
               setOpen(false);
-              setForm({ name: '', phone_number: '', email: '', password: '', current_status: 'available' });
+              setForm({ name: '', phone_number: '', email: '', password: '' });
               // refresh list
-              const res = await adminApi.drivers(pagination.page + 1, pagination.pageSize);
-              const list = res.data?.drivers || [];
+              const res = await usersApi.list(pagination.page + 1, pagination.pageSize, 'vendor_owner');
+              const list = res.data?.users || [];
               const total = res.data?.pagination?.total || list.length;
               setRows(list);
               setPagination((p) => ({ ...p, total }));
             } catch (e) {
-              setError(e?.response?.data?.error || e.message || 'Failed to create driver');
+              setError(e?.response?.data?.error || e.message || 'Failed to create vendor owner');
             } finally {
               setCreating(false);
             }
@@ -195,8 +186,4 @@ const DriversPage = () => {
       </Dialog>
     </Box>
   );
-};
-
-export default DriversPage;
-
-
+}

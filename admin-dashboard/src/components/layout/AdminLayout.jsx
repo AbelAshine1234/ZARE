@@ -43,8 +43,8 @@ const drawerWidth = 280; // mirrored in CSS as --drawer-width
 
 const menuItems = [
   {
-    text: 'Dashboard',
-    icon: <Dashboard />,
+    text: 'Analytics Dashboard',
+    icon: <Report />,
     path: '/',
     color: '#1976d2'  
   },
@@ -61,8 +61,10 @@ const menuItems = [
     color: '#388e3c',
     subItems: [
       { text: 'All Users', path: '/users' },
+      { text: 'Clients', path: '/clients' },
       { text: 'Drivers', path: '/drivers' },
-      { text: 'Employees', path: '/employees' }
+      { text: 'Employees', path: '/employees' },
+      { text: 'Vendor Owners', path: '/vendor-owners' }
     ]
   },
   {
@@ -120,6 +122,7 @@ const menuItems = [
       { text: 'Chat', path: '/chat' }
     ]
   },
+  
   {
     text: 'Settings',
     icon: <Settings />,
@@ -162,9 +165,9 @@ const AdminLayout = () => {
     setMobileOpen(false);
   };
 
-  const isActive = (path) => {
-    return location.pathname === path;
-  };
+  const isActive = (path) => location.pathname === path;
+  const isUnderPath = (path) => location.pathname.startsWith(path);
+  const isMenuActive = (item) => isActive(item.path) || (item.subItems?.some(si => isUnderPath(si.path)) ?? false);
 
   const drawer = (
     <Box>
@@ -187,29 +190,29 @@ const AdminLayout = () => {
               <ListItemButton
                 onClick={() => handleNavigation(item.path)}
                 sx={{
-                  backgroundColor: isActive(item.path) ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
-                  borderLeft: isActive(item.path) ? '4px solid #1976d2' : 'none',
+                  backgroundColor: isMenuActive(item) ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
+                  borderLeft: isMenuActive(item) ? '4px solid #1976d2' : 'none',
                   '&:hover': {
                     backgroundColor: 'rgba(25, 118, 210, 0.04)',
                   }
                 }}
               >
-                <ListItemIcon sx={{ color: isActive(item.path) ? '#1976d2' : item.color }}>
+                <ListItemIcon sx={{ color: isMenuActive(item) ? '#1976d2' : item.color }}>
                   {item.icon}
                 </ListItemIcon>
                 <ListItemText 
                   primary={item.text}
                   sx={{
                     '& .MuiTypography-root': {
-                      fontWeight: isActive(item.path) ? 600 : 400,
-                      color: isActive(item.path) ? '#1976d2' : 'inherit'
+                      fontWeight: isMenuActive(item) ? 600 : 400,
+                      color: isMenuActive(item) ? '#1976d2' : 'inherit'
                     }
                   }}
                 />
               </ListItemButton>
             </ListItem>
             
-            {item.subItems && isActive(item.path) && (
+            {item.subItems && isMenuActive(item) && (
               <List component="div" disablePadding>
                 {item.subItems.map((subItem) => (
                   <ListItem key={subItem.text} disablePadding>
@@ -259,7 +262,7 @@ const AdminLayout = () => {
           </IconButton>
           
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            {menuItems.find(item => item.path === location.pathname)?.text || 'Dashboard'}
+            {menuItems.find(item => item.path === location.pathname)?.text || 'Analytics Dashboard'}
           </Typography>
           
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>

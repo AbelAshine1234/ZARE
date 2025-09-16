@@ -23,6 +23,29 @@ api.interceptors.request.use((config) => {
 export default api;
 
 // Categorized API helpers
+export const usersApi = {
+  // Admin list with pagination
+  list: (page = 1, limit = 50, type) => api.get(`/api/admin/users?page=${page}&limit=${limit}${type ? `&type=${encodeURIComponent(type)}` : ''}`),
+  // Rich detail
+  detail: (id) => api.get(`/api/users/${id}`),
+  addPaymentMethod: (id, body) => api.post(`/api/users/${id}/payment-methods`, body),
+  updatePaymentMethod: (id, pmId, body) => api.put(`/api/users/${id}/payment-methods/${pmId}`, body),
+  deletePaymentMethod: (id, pmId) => api.delete(`/api/users/${id}/payment-methods/${pmId}`),
+  // Notes
+  listNotes: (id) => api.get(`/api/users/${id}/notes`),
+  createNote: (id, body) => api.post(`/api/users/${id}/notes`, body),
+  deleteNote: (id, noteId) => api.delete(`/api/users/${id}/notes/${noteId}`),
+};
+
+export const adminApi = {
+  drivers: (page = 1, limit = 50) => api.get(`/api/admin/drivers?page=${page}&limit=${limit}`),
+  employees: (page = 1, limit = 50) => api.get(`/api/admin/employees?page=${page}&limit=${limit}`),
+  createClient: (body) => api.post('/api/admin/users/clients', body),
+  createEmployee: (body) => api.post('/api/admin/users/employees', body),
+  createVendorOwner: (body) => api.post('/api/admin/users/vendor-owners', body),
+  createDriver: (body) => api.post('/api/admin/users/drivers', body),
+  vendors: (page = 1, limit = 50) => api.get(`/api/admin/vendors?page=${page}&limit=${limit}`),
+};
 export const categoriesApi = {
   list: () => api.get('/api/category'),
   detail: (id) => api.get(`/api/category/${id}`),
@@ -104,5 +127,45 @@ export const walletApi = {
   exportCsv: (id, isVendor = false) =>
     api.get(`/api/wallet/${id}/export/csv${isVendor ? '?isVendor=true' : ''}`, { responseType: 'blob' }),
   listAll: (page = 1, limit = 50) => api.get(`/api/wallet?page=${page}&limit=${limit}`),
+};
+
+// Analytics
+export const analyticsApi = {
+  approvedVendors: (page = 1, limit = 20) => api.get(`/api/analytics/vendors/approved?page=${page}&limit=${limit}`),
+  summary: () => api.get('/api/analytics/summary'),
+};
+
+// Vendors create helpers (multipart)
+export const vendorsApi = {
+  createIndividual: ({ name, description, category_ids, payment_method, subscription_id, cover_image, fayda_image, owner_user_id }) => {
+    const form = new FormData();
+    form.append('name', name || '');
+    if (description) form.append('description', description);
+    form.append('category_ids', JSON.stringify(category_ids || []));
+    form.append('payment_method', JSON.stringify(payment_method || {}));
+    form.append('subscription_id', String(subscription_id));
+    if (owner_user_id !== undefined && owner_user_id !== null && owner_user_id !== '') {
+      const idStr = String(parseInt(owner_user_id, 10));
+      form.append('owner_user_id', idStr);
+    }
+    if (cover_image) form.append('cover_image', cover_image);
+    if (fayda_image) form.append('fayda_image', fayda_image);
+    return api.post('/api/vendors/individual', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+  createBusiness: ({ name, description, category_ids, payment_method, subscription_id, cover_image, business_license_image, owner_user_id }) => {
+    const form = new FormData();
+    form.append('name', name || '');
+    if (description) form.append('description', description);
+    form.append('category_ids', JSON.stringify(category_ids || []));
+    form.append('payment_method', JSON.stringify(payment_method || {}));
+    form.append('subscription_id', String(subscription_id));
+    if (owner_user_id !== undefined && owner_user_id !== null && owner_user_id !== '') {
+      const idStr = String(parseInt(owner_user_id, 10));
+      form.append('owner_user_id', idStr);
+    }
+    if (cover_image) form.append('cover_image', cover_image);
+    if (business_license_image) form.append('business_license_image', business_license_image);
+    return api.post('/api/vendors/business', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
 };
 
