@@ -88,4 +88,7 @@ router.put(
 // Delete product
 router.delete('/:id', productController.deleteProduct);
 
+// Get current vendor owner's products
+router.get('/my-products', productController.getVendorProducts);
+
 module.exports = router;

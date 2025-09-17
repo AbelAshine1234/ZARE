@@ -809,10 +809,132 @@ const deleteProduct = async (req, res) => {
   }
 };
 
+// Get all products for the authenticated vendor owner
+const getVendorProducts = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, search, category_id, subcategory_id } = req.query;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    // Get all vendor IDs owned by the authenticated user
+    const userVendors = await prisma.vendor.findMany({
+      where: {
+        user_id: Number(userId),
+        status: true, // Only active vendors
+        is_approved: true // Only approved vendors
+      },
+      select: { id: true }
+    });
+
+    const vendorIds = userVendors.map(vendor => vendor.id);
+
+    if (vendorIds.length === 0) {
+      return res.status(200).json({
+        message: "No vendors found for this user",
+        products: [],
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total: 0,
+          pages: 0,
+        },
+      });
+    }
+
+    // Build where clause
+    const where = {
+      vendor_id: { in: vendorIds } // Only products from user's vendors
+    };
+
+    if (category_id) {
+      where.category_id = Number(category_id);
+    }
+
+    if (subcategory_id) {
+      where.subcategory_id = Number(subcategory_id);
+    }
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    // Get products
+    const products = await prisma.product.findMany({
+      where,
+      skip,
+      take: Number(limit),
+      include: {
+        vendor: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+          }
+        },
+        category: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
+        subcategory: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
+        images: {
+          where: { image_url: { not: null } },
+          select: { id: true, image_url: true }
+        },
+        videos: {
+          where: { video_url: { not: null } },
+          select: { id: true, video_url: true }
+        },
+        specs: true,
+        rating: true,
+      },
+      orderBy: {
+        created_at: 'desc',
+      },
+    });
+
+    const total = await prisma.product.count({ where });
+
+    return res.status(200).json({
+      message: "Vendor products retrieved successfully",
+      products,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit)),
+      },
+      vendor_count: vendorIds.length
+    });
+
+  } catch (error) {
+    console.error("Error fetching vendor products:", error);
+    return res.status(500).json({
+      message: "Failed to fetch vendor products",
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   createProduct,
   getAllProducts,
   getProductById,
   updateProduct,
   deleteProduct,
+  getVendorProducts,
 };
