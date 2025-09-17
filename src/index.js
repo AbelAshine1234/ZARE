@@ -47,6 +47,8 @@ app.use('/api/products', routes.product);
 app.use('/api/wallet', routes.wallet);
 app.use('/api/cashout-requests', routes.cash_out_request);
 app.use('/api/drivers', routes.driver);
+// Mount analytics routes for admin dashboard analytics pages
+app.use('/api/analytics', routes.analytics);
 
 // Global error handler
 app.use((err, req, res, next) => {

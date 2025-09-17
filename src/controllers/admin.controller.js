@@ -44,7 +44,6 @@ const getDashboardStats = async (req, res) => {
       activeDrivers,
       pendingCashouts
     };
-
     res.status(200).json(stats);
   } catch (error) {
     console.error('Dashboard stats error:', error);
@@ -87,18 +86,22 @@ const getRecentOrders = async (req, res) => {
   }
 };
 
-// Get all users with pagination
+// Get all users with pagination and optional type filter
 const getAllUsers = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
+    const type = req.query.type; // optional: client | vendor_owner | driver | employee | admin
+
+    const where = type ? { type } : undefined;
 
     const [users, totalCount] = await Promise.all([
       prisma.user.findMany({
         skip,
         take: limit,
         orderBy: { created_at: 'desc' },
+        where,
         include: {
           client: {
             include: {
@@ -108,8 +111,8 @@ const getAllUsers = async (req, res) => {
           },
           vendor: {
             include: {
-              image: true,
-              wallet: true
+              wallet: true,
+              subscription: true,
             }
           },
           driver: {
@@ -120,7 +123,7 @@ const getAllUsers = async (req, res) => {
           }
         }
       }),
-      prisma.user.count()
+      prisma.user.count({ where })
     ]);
 
     res.status(200).json({
@@ -315,7 +318,7 @@ const getAllDrivers = async (req, res) => {
       prisma.driver.findMany({
         skip,
         take: limit,
-        orderBy: { created_at: 'desc' },
+        orderBy: { id: 'desc' },
         include: {
           user: {
             select: {
@@ -334,8 +337,8 @@ const getAllDrivers = async (req, res) => {
           deliveries: {
             select: {
               id: true,
-              status: true,
-              created_at: true
+              delivery_status: true,
+              delivered_at: true
             }
           }
         }
@@ -505,6 +508,51 @@ const getAllDeliveries = async (req, res) => {
   }
 };
 
+// Get all employees with pagination
+const getAllEmployees = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const [employees, totalCount] = await Promise.all([
+      prisma.employee.findMany({
+        skip,
+        take: limit,
+        orderBy: { id: 'desc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              phone_number: true,
+              email: true,
+              type: true,
+              is_verified: true,
+              created_at: true,
+            }
+          },
+          vendor: true,
+        }
+      }),
+      prisma.employee.count()
+    ]);
+
+    return res.status(200).json({
+      employees,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        pages: Math.ceil(totalCount / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Get all employees error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getRecentOrders,
@@ -513,6 +561,7 @@ module.exports = {
   getAllProducts,
   getAllOrders,
   getAllDrivers,
+  getAllEmployees,
   getAllCashOutRequests,
   getAllTransactions,
   getAllDeliveries

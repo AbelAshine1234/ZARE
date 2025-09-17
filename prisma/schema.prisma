@@ -115,6 +115,7 @@ model User {
   wallet          Wallet?
   cashOutRequests CashOutRequest[] @relation("UserCashOutRequests")
   paymentMethods  PaymentMethod[] @relation("UserPaymentMethods")
+  userNotes       UserNote[]       // back-relation for UserNote
   
   @@map("user")
   DeliveryStatusLog DeliveryStatusLog[]
@@ -642,4 +643,17 @@ model VendorNote {
   vendor     Vendor  @relation(fields: [vendor_id], references: [id])
 
   @@map("vendor_note")
+}
+
+model UserNote {
+  id         Int      @id @default(autoincrement())
+  title      String
+  description String
+  created_at DateTime @default(now())
+
+  // Relations
+  user_id    Int
+  user       User     @relation(fields: [user_id], references: [id])
+
+  @@map("user_note")
 }

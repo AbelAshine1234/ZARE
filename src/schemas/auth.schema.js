@@ -8,9 +8,9 @@ const clientRegisterSchema = Joi.object({
     'any.required': 'Name is required.'
   }),
 
-  phone_number: Joi.string().pattern(/^\+?[0-9]{9,15}$/).required().messages({
+  phone_number: Joi.string().pattern(/^\+2519\d{8}$/).required().messages({
     'string.empty': 'Phone number is required.',
-    'string.pattern.base': 'Phone number must be a valid international format.',
+    'string.pattern.base': 'Phone number must be Ethiopian format: +2519XXXXXXXX.',
     'any.required': 'Phone number is required.'
   }),
 
@@ -38,9 +38,9 @@ const adminRegisterSchema = Joi.object({
     'any.required': 'Name is required.'
   }),
 
-  phone_number: Joi.string().pattern(/^\+?[0-9]{9,15}$/).required().messages({
+  phone_number: Joi.string().pattern(/^\+2519\d{8}$/).required().messages({
     'string.empty': 'Phone number is required.',
-    'string.pattern.base': 'Phone number must be a valid international format.',
+    'string.pattern.base': 'Phone number must be Ethiopian format: +2519XXXXXXXX.',
     'any.required': 'Phone number is required.'
   }),
 
@@ -65,10 +65,10 @@ const adminRegisterSchema = Joi.object({
 
 
 const loginSchema = Joi.object({
-  phone_number: Joi.string().pattern(/^\+?[0-9]{9,15}$/).required().messages({
+  phone_number: Joi.string().pattern(/^\+2519\d{8}$/).required().messages({
     'string.empty': 'Phone number is required.',
     'any.required': 'Phone number is required.',
-    'string.pattern.base': 'Phone number must be a valid international format.'
+    'string.pattern.base': 'Phone number must be Ethiopian format: +2519XXXXXXXX.'
   }),
   password: Joi.string().min(6).required().messages({
     'string.empty': 'Password is required.',
@@ -78,10 +78,10 @@ const loginSchema = Joi.object({
 });
 
 const verifyOtpSchema = Joi.object({
-  phone_number: Joi.string().pattern(/^\+?[0-9]{9,15}$/).required().messages({
+  phone_number: Joi.string().pattern(/^\+2519\d{8}$/).required().messages({
     'string.empty': 'Phone number is required.',
     'any.required': 'Phone number is required.',
-    'string.pattern.base': 'Phone number must be a valid international format.'
+    'string.pattern.base': 'Phone number must be Ethiopian format: +2519XXXXXXXX.'
   }),
   code: Joi.string().trim().pattern(/^[0-9]{4,8}$/).required().messages({
     'string.empty': 'OTP code is required.',
@@ -92,10 +92,10 @@ const verifyOtpSchema = Joi.object({
 
 // Resend OTP schema
 const resendOtpSchema = Joi.object({
-  phone_number: Joi.string().pattern(/^\+?[0-9]{9,15}$/).required().messages({
+  phone_number: Joi.string().pattern(/^\+2519\d{8}$/).required().messages({
     'string.empty': 'Phone number is required.',
     'any.required': 'Phone number is required.',
-    'string.pattern.base': 'Phone number must be a valid international format.'
+    'string.pattern.base': 'Phone number must be Ethiopian format: +2519XXXXXXXX.'
   }),
   channel: Joi.string().valid('sms', 'whatsapp').default('sms')
 });

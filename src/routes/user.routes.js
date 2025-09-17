@@ -15,6 +15,17 @@ const adminMiddleware = require('../middlewares/adminMiddleware');
 router.get('/', userController.getUsers);
 router.get('/:id', userController.getUserById);
 
+// Admin: add payment method to any user
+router.post('/:id/payment-methods', authenticate, adminMiddleware, userController.addUserPaymentMethod);
+// Admin: update and delete user payment methods
+router.put('/:id/payment-methods/:pmId', authenticate, adminMiddleware, userController.updateUserPaymentMethod);
+router.delete('/:id/payment-methods/:pmId', authenticate, adminMiddleware, userController.deleteUserPaymentMethod);
+
+// Admin: user notes
+router.get('/:id/notes', authenticate, adminMiddleware, userController.listUserNotes);
+router.post('/:id/notes', authenticate, adminMiddleware, userController.createUserNote);
+router.delete('/:id/notes/:noteId', authenticate, adminMiddleware, userController.deleteUserNote);
+
 // Apply admin middleware only on delete route
 router.delete('/:id', adminMiddleware, userController.deleteUser);
 

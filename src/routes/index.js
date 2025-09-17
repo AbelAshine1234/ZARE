@@ -26,4 +26,5 @@ module.exports = {
   user: require('./user.routes'),
   auth: require('./auth.routes'),
   admin: require('./admin.routes'),
-}; 
+  analytics: require('./analytics.routes'),
+};

@@ -18,16 +18,40 @@ const uploadImages = async (files, fields) => {
 // Generic vendor creation
 const createVendor = async (req, res, type, imageFields) => {
   try {
-    let { name, description, category_ids, payment_method, subscription_id } = req.body;
+    let { name, description, category_ids, payment_method, subscription_id, owner_user_id } = req.body;
 
     const requester = req.user; // { id, type }
-    const user_id = requester?.id;
+    let user_id = requester?.id;
 
     subscription_id = Number(subscription_id);
 
     if (!Number.isInteger(user_id)) return res.status(403).json({ error: "Unauthorized user." });
-    if (requester.type === 'admin') return res.status(403).json({ error: "Admin cannot create a vendor." });
-    if (requester.type !== 'vendor_owner' && requester.type !== 'employee') {
+
+    // If requester is admin, they can create a vendor for a chosen vendor owner
+    if (requester.type === 'admin') {
+      const rawOwnerId = owner_user_id != null ? String(owner_user_id).trim() : '';
+      const targetOwnerId = Number(rawOwnerId);
+      if (!Number.isInteger(targetOwnerId)) {
+        return res.status(400).json({ error: "owner_user_id is required and must be a valid integer user id" });
+      }
+      let owner = await prisma.user.findUnique({ where: { id: targetOwnerId } });
+      if (!owner) return res.status(404).json({ error: `Owner user with id ${targetOwnerId} does not exist.` });
+      // For individual vendors, allow picking a client and upgrade them to vendor_owner automatically
+      if (type === 'individual') {
+        if (owner.type === 'client') {
+          owner = await prisma.user.update({ where: { id: targetOwnerId }, data: { type: 'vendor_owner' } });
+        }
+        if (owner.type !== 'vendor_owner' && owner.type !== 'employee') {
+          return res.status(400).json({ error: 'Selected user must be a vendor owner or employee for individual vendors.' });
+        }
+      } else {
+        // business vendors require an existing vendor owner or employee
+        if (owner.type !== 'vendor_owner' && owner.type !== 'employee') {
+          return res.status(400).json({ error: 'Selected user must be a vendor owner or employee for business vendors.' });
+        }
+      }
+      user_id = targetOwnerId;
+    } else if (requester.type !== 'vendor_owner' && requester.type !== 'employee') {
       return res.status(403).json({ error: "Only vendor owners or employees can create vendors." });
     }
 
@@ -37,8 +61,14 @@ const createVendor = async (req, res, type, imageFields) => {
     if (!userExists) return res.status(404).json({ error: `User with id ${user_id} does not exist.` });
 
     const userType = userExists.type;
-    if (userType !== "vendor_owner" && userType !== "employee") {
-      return res.status(400).json({ error: "User is not a vendor owner or employee." });
+    if (type === 'individual') {
+      if (userType !== 'vendor_owner' && userType !== 'employee') {
+        return res.status(400).json({ error: "User is not eligible to own an individual vendor." });
+      }
+    } else {
+      if (userType !== 'vendor_owner' && userType !== 'employee') {
+        return res.status(400).json({ error: "User is not a vendor owner or employee." });
+      }
     }
 
     // Both vendor_owner and employee can create vendors
@@ -46,6 +76,7 @@ const createVendor = async (req, res, type, imageFields) => {
     const existingVendor = await prisma.vendor.findUnique({ where: { user_id } });
     if (existingVendor) {
       if (existingVendor.status === false) {
+        const autoApprove = requester.type === 'admin';
         // Revive soft-deleted vendor for this user
         const revived = await prisma.vendor.update({
           where: { id: existingVendor.id },
@@ -54,6 +85,7 @@ const createVendor = async (req, res, type, imageFields) => {
             name,
             type,
             description,
+            ...(autoApprove ? { is_approved: true } : {}),
             subscription: { connect: { id: subscription_id } },
           },
           include: {
@@ -125,12 +157,13 @@ const createVendor = async (req, res, type, imageFields) => {
     const uploadedImages = await uploadImages(req.files, imageFields);
 
     // Create vendor
+    const autoApprove = requester.type === 'admin';
     const vendor = await prisma.vendor.create({
       data: {
         name,
         type, // <-- ensures "business" or "individual" is set correctly
         description,
-        is_approved: false,
+        is_approved: autoApprove,
         vendorCategories: category_ids?.length
           ? { create: category_ids.map(id => ({ category: { connect: { id } } })) }
           : undefined,
@@ -181,15 +214,6 @@ const createVendor = async (req, res, type, imageFields) => {
         subscription: true,
         wallet: true,
       },
-    });
-
-    // Create initial vendor note automatically
-    await prisma.vendorNote.create({
-      data: {
-        vendor_id: vendor.id,
-        title: 'Vendor Created',
-        description: 'Initial note generated automatically when the vendor was created.'
-      }
     });
 
     // Only return URLs for images
@@ -625,17 +649,29 @@ module.exports.deleteVendorPaymentMethod = async (req, res) => {
 module.exports.listVendorNotes = async (req, res) => {
   try {
     const vendorId = Number(req.params.id);
-    if (!Number.isInteger(vendorId)) return res.status(400).json({ error: 'Invalid vendor id' });
+    if (!Number.isInteger(vendorId)) {
+      return res.status(400).json({ error: 'Invalid vendor id' });
+    }
+
     const notes = await prisma.vendorNote.findMany({
       where: { vendor_id: vendorId },
       orderBy: { created_at: 'desc' }
     });
-    return res.status(200).json({ notes });
+
+    if (notes.length > 0) {
+      return res.status(200).json({ notes });
+    } else {
+      // send 200 but no notes key (or you can send a message)
+      return res.status(200).json({});
+      // OR if you want a message:
+      // return res.status(200).json({ message: "No notes found" });
+    }
   } catch (e) {
     console.error('List vendor notes error:', e);
     return res.status(500).json({ error: 'Failed to list notes' });
   }
 };
+
 
 module.exports.createVendorNote = async (req, res) => {
   try {
