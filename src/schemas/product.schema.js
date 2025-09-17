@@ -22,6 +22,12 @@ const productSchema = Joi.object({
       'boolean.base': 'has_discount must be a boolean.',
     }),
 
+  sold_in_bulk: Joi.boolean()
+    .default(false)
+    .messages({
+      'boolean.base': 'sold_in_bulk must be a boolean.',
+    }),
+
   stock: Joi.number()
     .integer()
     .min(0)

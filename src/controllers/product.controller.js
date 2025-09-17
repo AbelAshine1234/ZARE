@@ -101,6 +101,7 @@ const createProduct = async (req, res) => {
       name, 
       description, 
       has_discount, 
+      sold_in_bulk,
       stock, 
       vendor_id, 
       category_id, 
@@ -114,6 +115,7 @@ const createProduct = async (req, res) => {
     subcategory_id = Number(subcategory_id);
     stock = Number(stock);
     has_discount = has_discount === 'true' || has_discount === true;
+    sold_in_bulk = sold_in_bulk === 'true' || sold_in_bulk === true;
 
     // Validate required fields
     if (isNaN(vendor_id)) return res.status(400).json({ error: "Invalid vendor ID" });
@@ -211,6 +213,7 @@ const createProduct = async (req, res) => {
         name,
         description,
         has_discount,
+        sold_in_bulk,
         stock,
         vendor: { connect: { id: vendor_id } },
         category: { connect: { id: category_id } },
@@ -239,6 +242,8 @@ const createProduct = async (req, res) => {
         },
         specs: true,
         rating: true,
+        images: true,
+        videos: true,
       },
     });
 
@@ -503,6 +508,7 @@ const updateProduct = async (req, res) => {
       name, 
       description, 
       has_discount, 
+      sold_in_bulk,
       stock, 
       category_id, 
       subcategory_id, 
@@ -523,6 +529,7 @@ const updateProduct = async (req, res) => {
     if (subcategory_id) subcategory_id = Number(subcategory_id);
     if (stock) stock = Number(stock);
     if (has_discount !== undefined) has_discount = has_discount === 'true' || has_discount === true;
+    if (sold_in_bulk !== undefined) sold_in_bulk = sold_in_bulk === 'true' || sold_in_bulk === true;
 
     // Validate category and subcategory if provided
     if (category_id && isNaN(category_id)) {
@@ -569,6 +576,7 @@ const updateProduct = async (req, res) => {
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
     if (has_discount !== undefined) updateData.has_discount = has_discount;
+    if (sold_in_bulk !== undefined) updateData.sold_in_bulk = sold_in_bulk;
     if (stock !== undefined) updateData.stock = stock;
     if (category_id) updateData.category = { connect: { id: category_id } };
     if (subcategory_id) updateData.subcategory = { connect: { id: subcategory_id } };
@@ -608,6 +616,8 @@ const updateProduct = async (req, res) => {
         },
         specs: true,
         rating: true,
+        images: true,
+        videos: true,
       },
     });
 
