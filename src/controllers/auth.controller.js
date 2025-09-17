@@ -651,4 +651,139 @@ const me = async (req, res) => {
   }
 };
 
-module.exports = {resendOtp, registerAsClient, login, registerAsAdmin, registerAsDriver, registerVendorOwner, registerAsEmployee, verifyOtp, me };
+// Forgot Password - Send OTP to phone number
+const forgotPassword = async (req, res) => {
+  try {
+    const { phone_number } = req.body;
+
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { phone_number }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found with this phone number." });
+    }
+
+    // Send OTP
+    try {
+      const { sendOtp } = require("../utils/otp.util");
+      await sendOtp(phone_number, 'sms');
+    } catch (otpErr) {
+      return res.status(502).json({ error: "Failed to send OTP. Please try again." });
+    }
+
+    return res.status(200).json({
+      message: "OTP has been sent to your phone number.",
+      phone_number
+    });
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// Verify Reset OTP - Verify OTP and return reset token
+const verifyResetOtp = async (req, res) => {
+  try {
+    const { phone_number, code } = req.body;
+
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { phone_number }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    // Verify OTP
+    const { verifyOtp: verifyOtpUtil } = require("../utils/otp.util");
+    const isVerified = await verifyOtpUtil(phone_number, code);
+
+    if (!isVerified) {
+      return res.status(400).json({ error: "Invalid or expired OTP code." });
+    }
+
+    // Generate reset token (valid for 15 minutes)
+    const resetToken = jwt.sign(
+      { 
+        userId: user.id, 
+        phone_number,
+        type: 'password_reset' 
+      },
+      process.env.SECRET_KEY,
+      { expiresIn: "15m" }
+    );
+
+    return res.status(200).json({
+      message: "OTP verified successfully.",
+      reset_token: resetToken,
+      expires_in: "15 minutes"
+    });
+  } catch (error) {
+    console.error("Verify reset OTP error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// Reset Password - Use reset token to set new password
+const resetPassword = async (req, res) => {
+  try {
+    const { token, new_password } = req.body;
+
+    // Verify reset token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.SECRET_KEY);
+    } catch (jwtErr) {
+      return res.status(401).json({ error: "Invalid or expired reset token." });
+    }
+
+    // Check if token is for password reset
+    if (decoded.type !== 'password_reset') {
+      return res.status(401).json({ error: "Invalid token type." });
+    }
+
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(new_password, 10);
+
+    // Update password
+    await prisma.user.update({
+      where: { id: decoded.userId },
+      data: { password: hashedPassword }
+    });
+
+    return res.status(200).json({
+      message: "Password has been reset successfully.",
+      user_id: user.id
+    });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+module.exports = {
+  resendOtp, 
+  registerAsClient, 
+  login, 
+  registerAsAdmin, 
+  registerAsDriver, 
+  registerVendorOwner, 
+  registerAsEmployee, 
+  verifyOtp, 
+  me,
+  forgotPassword,
+  verifyResetOtp,
+  resetPassword
+};
