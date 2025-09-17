@@ -69,6 +69,9 @@ router.post(
 // Get all products with pagination and filtering
 router.get('/', productController.getAllProducts);
 
+// Get current vendor owner's products (must come before /:id route)
+router.get('/my-products', productController.getVendorProducts);
+
 // Get product by ID
 router.get('/:id', productController.getProductById);
 
@@ -87,8 +90,5 @@ router.put(
 
 // Delete product
 router.delete('/:id', productController.deleteProduct);
-
-// Get current vendor owner's products
-router.get('/my-products', productController.getVendorProducts);
 
 module.exports = router;

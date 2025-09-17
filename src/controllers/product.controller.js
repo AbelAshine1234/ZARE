@@ -892,12 +892,16 @@ const getVendorProducts = async (req, res) => {
           }
         },
         images: {
-          where: { image_url: { not: null } },
-          select: { id: true, image_url: true }
+          select: {
+            id: true,
+            image_url: true
+          }
         },
         videos: {
-          where: { video_url: { not: null } },
-          select: { id: true, video_url: true }
+          select: {
+            id: true,
+            video_url: true
+          }
         },
         specs: true,
         rating: true,
@@ -909,9 +913,16 @@ const getVendorProducts = async (req, res) => {
 
     const total = await prisma.product.count({ where });
 
+    // Filter out products with invalid image/video URLs
+    const filteredProducts = products.map(product => ({
+      ...product,
+      images: product.images.filter(img => img.image_url && img.image_url.trim() !== ''),
+      videos: product.videos.filter(vid => vid.video_url && vid.video_url.trim() !== '')
+    }));
+
     return res.status(200).json({
       message: "Vendor products retrieved successfully",
-      products,
+      products: filteredProducts,
       pagination: {
         page: Number(page),
         limit: Number(limit),

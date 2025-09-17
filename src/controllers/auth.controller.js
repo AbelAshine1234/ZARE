@@ -644,7 +644,51 @@ const me = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    return res.status(200).json(user);
+    let response = { ...user };
+
+    // If user is a vendor_owner, check their vendor status
+    if (user.type === 'vendor_owner') {
+      const vendor = await prisma.vendor.findUnique({
+        where: { user_id: Number(userId) },
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          is_approved: true,
+          status: true,
+        },
+      });
+
+      if (!vendor) {
+        // Vendor owner has no vendor
+        response.vendor = null;
+        response.vendorStatus = 'no_vendor';
+        response.message = 'You are registered as a vendor owner but do not have a vendor account yet.';
+      } else {
+        // Vendor owner has a vendor, include approval status
+        response.vendor = {
+          id: vendor.id,
+          name: vendor.name,
+          type: vendor.type,
+          isApproved: vendor.is_approved,
+          status: vendor.status,
+        };
+
+        // Determine vendor status message
+        if (!vendor.is_approved) {
+          response.vendorStatus = 'pending_approval';
+          response.message = 'Your vendor account is pending admin approval.';
+        } else if (!vendor.status) {
+          response.vendorStatus = 'inactive';
+          response.message = 'Your vendor account is currently inactive.';
+        } else {
+          response.vendorStatus = 'active';
+          response.message = 'Your vendor account is active and approved.';
+        }
+      }
+    }
+
+    return res.status(200).json(response);
   } catch (error) {
     console.error('Auth me error:', error);
     return res.status(500).json({ error: 'Internal server error' });
