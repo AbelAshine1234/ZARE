@@ -258,6 +258,7 @@ model Product {
   name            String
   description     String?
   has_discount    Boolean   @default(false)
+  sold_in_bulk    Boolean   @default(false)
   stock           Int
   created_at      DateTime  @default(now())
   

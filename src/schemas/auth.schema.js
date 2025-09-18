@@ -100,6 +100,41 @@ const resendOtpSchema = Joi.object({
   channel: Joi.string().valid('sms', 'whatsapp').default('sms')
 });
 
+// Forgot Password schemas
+const forgotPasswordSchema = Joi.object({
+  phone_number: Joi.string().pattern(/^\+2519\d{8}$/).required().messages({
+    'string.empty': 'Phone number is required.',
+    'string.pattern.base': 'Phone number must be Ethiopian format: +2519XXXXXXXX.',
+    'any.required': 'Phone number is required.'
+  })
+});
+
+const verifyResetOtpSchema = Joi.object({
+  phone_number: Joi.string().pattern(/^\+2519\d{8}$/).required().messages({
+    'string.empty': 'Phone number is required.',
+    'string.pattern.base': 'Phone number must be Ethiopian format: +2519XXXXXXXX.',
+    'any.required': 'Phone number is required.'
+  }),
+  code: Joi.string().trim().pattern(/^[0-9]{4,8}$/).required().messages({
+    'string.empty': 'OTP code is required.',
+    'any.required': 'OTP code is required.',
+    'string.pattern.base': 'OTP code must be 4-8 digits.'
+  })
+});
+
+const resetPasswordSchema = Joi.object({
+  token: Joi.string().required().messages({
+    'string.empty': 'Reset token is required.',
+    'any.required': 'Reset token is required.'
+  }),
+  new_password: Joi.string().min(6).max(64).required().messages({
+    'string.empty': 'New password is required.',
+    'string.min': 'New password must be at least 6 characters.',
+    'string.max': 'New password must be at most 64 characters.',
+    'any.required': 'New password is required.'
+  })
+});
+
 const driverRegisterSchema = Joi.object({
   name: Joi.string().trim().min(2).max(50).required().messages({
     'string.empty': 'Name is required.',
@@ -138,4 +173,14 @@ const driverRegisterSchema = Joi.object({
 });
 
  
-module.exports = { clientRegisterSchema, loginSchema ,adminRegisterSchema, verifyOtpSchema, resendOtpSchema,driverRegisterSchema}; 
+module.exports = { 
+  clientRegisterSchema, 
+  loginSchema,
+  adminRegisterSchema, 
+  verifyOtpSchema, 
+  resendOtpSchema,
+  driverRegisterSchema,
+  forgotPasswordSchema,
+  verifyResetOtpSchema,
+  resetPasswordSchema
+};

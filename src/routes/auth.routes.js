@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
+const { forgotPassword, verifyResetOtp, resetPassword } = require('../controllers/auth.controller');
 const { authenticate } = require('../middlewares/authMiddleware');
 
 const { rootValidation, validateBody, validateFileExistsObjects,validateFileExists } = require('../middlewares/validate');
@@ -10,7 +11,7 @@ const jsonFieldsParser = require('../middlewares/jsonFieldsParser');
 const { clientRegisterSchema, loginSchema ,adminRegisterSchema} = require('../schemas/auth.schema');
 const { driverRegistrationSchema } = require('../schemas/driver.schema');
 
-const { verifyOtpSchema, resendOtpSchema } = require('../schemas/auth.schema');
+const { verifyOtpSchema, resendOtpSchema, forgotPasswordSchema, verifyResetOtpSchema, resetPasswordSchema } = require('../schemas/auth.schema');
 
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
@@ -76,5 +77,10 @@ router.post('/resend-otp', validateBody(resendOtpSchema), authController.resendO
 
 // Current user
 router.get('/me', authenticate, authController.me);
+
+// Forgot Password routes
+router.post('/forgot-password', validateBody(forgotPasswordSchema), forgotPassword);
+router.post('/verify-reset-otp', validateBody(verifyResetOtpSchema), verifyResetOtp);
+router.post('/reset-password', validateBody(resetPasswordSchema), resetPassword);
 
 module.exports = router; 

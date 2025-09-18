@@ -27,6 +27,7 @@ import RecycleBinVendorsPage from './pages/users/RecycleBinVendorsPage';
 
 // Product Management Pages
 import ProductsPage from './pages/products/ProductsPage';
+import ProductDetailPage from './pages/products/ProductDetailPage';
 import CategoriesPage from './pages/products/CategoriesPage';
 import SubcategoriesPage from './pages/products/SubcategoriesPage';
 import SubcategoryDetailPage from './pages/products/SubcategoryDetailPage';
@@ -121,6 +122,7 @@ function AppRoutes() {
         
         {/* Product Management */}
         <Route path="products" element={<ProductsPage />} />
+        <Route path="products/:id" element={<ProductDetailPage />} />
         <Route path="categories" element={<CategoriesPage />} />
         <Route path="categories/:id" element={<CategoryDetailPage />} />
         <Route path="subcategories" element={<SubcategoriesPage />} />

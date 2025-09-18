@@ -422,7 +422,7 @@ const getVendorWallets = async (req, res) => {
         user: {
           vendor: {
             // Any vendor relation indicates vendor account
-            is_not: null
+            not: null
           }
         }
       },
@@ -438,7 +438,11 @@ const getVendorWallets = async (req, res) => {
 
     const total = await prisma.wallet.count({
       where: {
-        user: { vendor: { is_not: null } }
+        user: {
+          vendor: {
+            not: null
+          }
+        }
       }
     });
 
