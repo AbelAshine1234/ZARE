@@ -22,6 +22,50 @@ export const fetchProducts = createAsyncThunk(
   }
 );
 
+export const fetchMyProducts = createAsyncThunk(
+  'products/fetchMyProducts',
+  async ({ page = 1, limit = 10 } = {}, thunkAPI) => {
+    try {
+      const params = new URLSearchParams();
+      params.set('page', String(page));
+      params.set('limit', String(limit));
+      const res = await api.get(`/api/products/my-products?${params.toString()}`);
+      return {
+        items: Array.isArray(res.data?.products) ? res.data.products : [],
+        pagination: res.data?.pagination || { page, limit, total: 0, pages: 0 },
+      };
+    } catch (e) {
+      return thunkAPI.rejectWithValue(e.response?.data?.error || 'Failed to load my products');
+    }
+  }
+);
+
+export const fetchAdminProducts = createAsyncThunk(
+  'products/fetchAdminProducts',
+  async ({ page = 1, limit = 10, search, vendor_id, category_id, status, approved, sortBy = 'created_at', sortOrder = 'desc' } = {}, thunkAPI) => {
+    try {
+      const params = new URLSearchParams();
+      params.set('page', String(page));
+      params.set('limit', String(limit));
+      if (search) params.set('search', search);
+      if (vendor_id) params.set('vendor_id', String(vendor_id));
+      if (category_id) params.set('category_id', String(category_id));
+      if (status) params.set('status', status);
+      if (approved !== undefined) params.set('approved', String(approved));
+      params.set('sortBy', sortBy);
+      params.set('sortOrder', sortOrder);
+
+      const res = await api.get(`/api/products/admin/dashboard/all?${params.toString()}`);
+      return {
+        items: Array.isArray(res.data?.products) ? res.data.products : [],
+        pagination: res.data?.pagination || { page, limit, total: 0, pages: 0 },
+      };
+    } catch (e) {
+      return thunkAPI.rejectWithValue(e.response?.data?.message || 'Failed to load admin products');
+    }
+  }
+);
+
 export const createProduct = createAsyncThunk(
   'products/create',
   async (payload, thunkAPI) => {
@@ -85,6 +129,34 @@ const productsSlice = createSlice({
         state.pagination = action.payload.pagination;
       })
       .addCase(fetchProducts.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || 'Error';
+        state.items = [];
+      })
+      .addCase(fetchMyProducts.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchMyProducts.fulfilled, (state, action) => {
+        state.loading = false;
+        state.items = action.payload.items;
+        state.pagination = action.payload.pagination;
+      })
+      .addCase(fetchMyProducts.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || 'Error';
+        state.items = [];
+      })
+      .addCase(fetchAdminProducts.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchAdminProducts.fulfilled, (state, action) => {
+        state.loading = false;
+        state.items = action.payload.items;
+        state.pagination = action.payload.pagination;
+      })
+      .addCase(fetchAdminProducts.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || 'Error';
         state.items = [];

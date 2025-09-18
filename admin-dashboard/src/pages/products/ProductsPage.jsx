@@ -1,36 +1,26 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Paper,
   Typography,
   TextField,
-  Button,
   Chip,
   IconButton,
   Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Alert,
-  Snackbar,
   CircularProgress,
   Grid,
   Card,
   CardMedia,
   CardContent,
-  Switch,
-  FormControlLabel
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import {
-  Add,
   Search,
-  Edit,
-  Delete,
   Visibility,
   Category,
   Store,
@@ -39,9 +29,10 @@ import {
 } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchProducts, createProduct, updateProduct, deleteProduct as deleteProductThunk } from '../../store/slices/productsSlice';
+import { fetchProducts, fetchMyProducts, fetchAdminProducts } from '../../store/slices/productsSlice';
 
 const ProductsPage = () => {
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const { items: products, loading } = useSelector(state => state.products);
   const [categories, setCategories] = useState([]);
@@ -50,13 +41,9 @@ const ProductsPage = () => {
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterVendor, setFilterVendor] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   useEffect(() => {
-    dispatch(fetchProducts({ page: 1, limit: 50 }));
+    dispatch(fetchAdminProducts({ page: 1, limit: 50 }));
   }, [dispatch]);
 
   useEffect(() => {
@@ -92,52 +79,8 @@ const ProductsPage = () => {
     }));
   }, [products]);
 
-  const handleEditProduct = (product) => {
-    setSelectedProduct(product);
-    setDialogOpen(true);
-  };
 
-  const handleDeleteProduct = (product) => {
-    setSelectedProduct(product);
-    setDeleteDialogOpen(true);
-  };
 
-  const handleSaveProduct = async () => {
-    try {
-      if (selectedProduct.id) {
-        await dispatch(updateProduct({ id: selectedProduct.id, data: selectedProduct }));
-        setSnackbar({ open: true, message: 'Product updated successfully', severity: 'success' });
-      } else {
-        await dispatch(createProduct(selectedProduct));
-        setSnackbar({ open: true, message: 'Product created successfully', severity: 'success' });
-      }
-      setDialogOpen(false);
-      setSelectedProduct(null);
-    } catch (error) {
-      setSnackbar({ open: true, message: 'Error saving product', severity: 'error' });
-    }
-  };
-
-  const handleDeleteConfirm = async () => {
-    try {
-      await dispatch(deleteProductThunk(selectedProduct.id));
-      setSnackbar({ open: true, message: 'Product deleted successfully', severity: 'success' });
-      setDeleteDialogOpen(false);
-      setSelectedProduct(null);
-    } catch (error) {
-      setSnackbar({ open: true, message: 'Error deleting product', severity: 'error' });
-    }
-  };
-
-  const handleStatusChange = async (productId, newStatus) => {
-    try {
-      await axios.patch(`/api/products/${productId}/status`, { status: newStatus });
-      setSnackbar({ open: true, message: 'Product status updated successfully', severity: 'success' });
-      fetchData();
-    } catch (error) {
-      setSnackbar({ open: true, message: 'Error updating product status', severity: 'error' });
-    }
-  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -273,42 +216,18 @@ const ProductsPage = () => {
     {
       field: 'actions',
       headerName: 'Actions',
-      width: 200,
+      width: 120,
       renderCell: (params) => (
         <Box>
           <Tooltip title="View Details">
-            <IconButton size="small" color="primary">
+            <IconButton 
+              size="small" 
+              color="primary"
+              onClick={() => navigate(`/products/${params.row.id}`)}
+            >
               <Visibility />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Edit Product">
-            <IconButton 
-              size="small" 
-              color="warning"
-              onClick={() => handleEditProduct(params.row)}
-            >
-              <Edit />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Delete Product">
-            <IconButton 
-              size="small" 
-              color="error"
-              onClick={() => handleDeleteProduct(params.row)}
-            >
-              <Delete />
-            </IconButton>
-          </Tooltip>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={params.row.status === 'active'}
-                onChange={(e) => handleStatusChange(params.row.id, e.target.checked ? 'active' : 'inactive')}
-                size="small"
-              />
-            }
-            label=""
-          />
         </Box>
       ),
     },
@@ -365,25 +284,6 @@ const ProductsPage = () => {
         <Typography variant="h4" fontWeight="bold">
           Product Management
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={() => {
-            setSelectedProduct({
-              name: '',
-              description: '',
-              price: '',
-              category: '',
-              vendor: '',
-              stock: 0,
-              status: 'active',
-              image_url: ''
-            });
-            setDialogOpen(true);
-          }}
-        >
-          Add New Product
-        </Button>
       </Box>
 
       {/* Filters */}
@@ -472,148 +372,7 @@ const ProductsPage = () => {
         />
       </Paper>
 
-      {/* Edit/Create Product Dialog */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>
-          {selectedProduct?.id ? 'Edit Product' : 'Create New Product'}
-        </DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ pt: 1 }}>
-            <Grid item xs={12} md={6}>
-              <TextField
-                label="Product Name"
-                value={selectedProduct?.name || ''}
-                onChange={(e) => setSelectedProduct({ ...selectedProduct, name: e.target.value })}
-                fullWidth
-                margin="normal"
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                label="Price"
-                type="number"
-                value={selectedProduct?.price || ''}
-                onChange={(e) => setSelectedProduct({ ...selectedProduct, price: parseFloat(e.target.value) })}
-                fullWidth
-                margin="normal"
-                InputProps={{
-                  startAdornment: '$',
-                }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                label="Description"
-                multiline
-                rows={3}
-                value={selectedProduct?.description || ''}
-                onChange={(e) => setSelectedProduct({ ...selectedProduct, description: e.target.value })}
-                fullWidth
-                margin="normal"
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>Category</InputLabel>
-                <Select
-                  value={selectedProduct?.category || ''}
-                  label="Category"
-                  onChange={(e) => setSelectedProduct({ ...selectedProduct, category: e.target.value })}
-                >
-                  {categories.map((category) => (
-                    <MenuItem key={category.id} value={category.name}>
-                      {category.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>Vendor</InputLabel>
-                <Select
-                  value={selectedProduct?.vendor || ''}
-                  label="Vendor"
-                  onChange={(e) => setSelectedProduct({ ...selectedProduct, vendor: e.target.value })}
-                >
-                  {vendors.map((vendor) => (
-                    <MenuItem key={vendor.id} value={vendor.name}>
-                      {vendor.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                label="Stock Quantity"
-                type="number"
-                value={selectedProduct?.stock || 0}
-                onChange={(e) => setSelectedProduct({ ...selectedProduct, stock: parseInt(e.target.value) })}
-                fullWidth
-                margin="normal"
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                label="Image URL"
-                value={selectedProduct?.image_url || ''}
-                onChange={(e) => setSelectedProduct({ ...selectedProduct, image_url: e.target.value })}
-                fullWidth
-                margin="normal"
-                InputProps={{
-                  startAdornment: <Image sx={{ mr: 1, color: 'text.secondary' }} />,
-                }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={selectedProduct?.status || 'active'}
-                  label="Status"
-                  onChange={(e) => setSelectedProduct({ ...selectedProduct, status: e.target.value })}
-                >
-                  <MenuItem value="active">Active</MenuItem>
-                  <MenuItem value="inactive">Inactive</MenuItem>
-                  <MenuItem value="pending">Pending</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleSaveProduct} variant="contained">Save</Button>
-        </DialogActions>
-      </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to delete product "{selectedProduct?.name}"? This action cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

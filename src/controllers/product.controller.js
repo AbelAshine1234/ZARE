@@ -1,6 +1,7 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const { imageUploadQueue, videoUploadQueue } = require("../config/queue.config");
+const { uploadImageToCloudinary, uploadVideoToCloudinary } = require("../utils/cloudinary");
 
 // Generic image uploader with queue processing
 const uploadImages = async (files, fields, productId) => {
@@ -948,8 +949,8 @@ const getAdminAllProducts = async (req, res) => {
             user: {
               select: {
                 email: true,
-                first_name: true,
-                last_name: true
+                
+                
               }
             }
           }
@@ -1033,8 +1034,8 @@ const getPendingProducts = async (req, res) => {
             user: {
               select: {
                 email: true,
-                first_name: true,
-                last_name: true
+                
+                
               }
             }
           }
@@ -1117,8 +1118,8 @@ const getProductsByVendor = async (req, res) => {
         user: {
           select: {
             email: true,
-            first_name: true,
-            last_name: true
+            
+            
           }
         }
       }
@@ -1480,6 +1481,150 @@ const deleteProductImage = async (req, res) => {
   }
 };
 
+// Update product videos
+const updateProductVideos = async (req, res) => {
+  try {
+    const productId = Number(req.params.id);
+    const { keepVideos } = req.body; // JSON string array of video IDs to keep
+    const videos = req.files?.videos; // New videos to upload
+
+    if (isNaN(productId)) {
+      return res.status(400).json({ error: "Invalid product ID" });
+    }
+
+    // Parse keepVideos (should be a JSON string array)
+    let keepVideoIds = [];
+    if (keepVideos) {
+      try {
+        keepVideoIds = JSON.parse(keepVideos);
+        if (!Array.isArray(keepVideoIds)) throw new Error();
+      } catch {
+        return res.status(400).json({ error: "Invalid format for keepVideos" });
+      }
+    }
+
+    // Fetch product with current videos
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      include: { videos: true }
+    });
+
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    // Identify videos to delete (those NOT in keepVideoIds)
+    const videosToDelete = product.videos.filter(
+      (vid) => !keepVideoIds.includes(vid.id)
+    );
+
+    if (videosToDelete.length > 0) {
+      const deleteIds = videosToDelete.map((vid) => vid.id);
+      await prisma.video.deleteMany({
+        where: { id: { in: deleteIds } },
+      });
+      // Optional: Delete videos from Cloudinary if you have public_id stored
+    }
+
+    // Upload new videos if any
+    let newVideos = [];
+    if (videos && videos.length > 0) {
+      const uploadPromises = videos.map(async (file) => {
+        // Validate file size (max 50MB for videos)
+        const maxSize = 50 * 1024 * 1024; // 50MB
+        if (file.size > maxSize) {
+          throw new Error(`Video file ${file.originalname} is too large. Maximum size is 50MB.`);
+        }
+
+        // Validate file type
+        const allowedTypes = ['video/mp4', 'video/avi', 'video/mov', 'video/wmv', 'video/flv', 'video/webm'];
+        if (!allowedTypes.includes(file.mimetype)) {
+          throw new Error(`Video file ${file.originalname} has unsupported format. Allowed formats: MP4, AVI, MOV, WMV, FLV, WebM`);
+        }
+
+        // Upload to cloudinary
+        const videoUrl = await uploadVideoToCloudinary(
+          file.buffer,
+          `${productId}_product_video_${file.originalname}`
+        );
+
+        return prisma.video.create({
+          data: {
+            video_url: videoUrl,
+            product_id: productId,
+          },
+        });
+      });
+
+      newVideos = await Promise.all(uploadPromises);
+    }
+
+    // Combine kept + new videos
+    const finalVideos = product.videos
+      .filter((vid) => keepVideoIds.includes(vid.id))
+      .concat(newVideos);
+
+    return res.status(200).json({
+      message: "Product videos updated successfully",
+      videos: finalVideos.map(({ id, video_url, created_at }) => ({
+        id,
+        video_url,
+        created_at,
+      })),
+      deleted_count: videosToDelete.length,
+      added_count: newVideos.length
+    });
+
+  } catch (error) {
+    console.error("Error updating product videos:", error);
+    return res.status(500).json({
+      message: "Failed to update product videos",
+      error: error.message
+    });
+  }
+};
+
+// Delete specific product video
+const deleteProductVideo = async (req, res) => {
+  try {
+    const productId = Number(req.params.id);
+    const videoId = Number(req.params.videoId);
+
+    if (isNaN(productId) || isNaN(videoId)) {
+      return res.status(400).json({ error: "Invalid product ID or video ID" });
+    }
+
+    // Check if video belongs to product
+    const video = await prisma.video.findFirst({
+      where: {
+        id: videoId,
+        product_id: productId
+      }
+    });
+
+    if (!video) {
+      return res.status(404).json({ error: "Video not found for this product" });
+    }
+
+    // Delete the video
+    await prisma.video.delete({
+      where: { id: videoId }
+    });
+
+    return res.status(200).json({
+      message: "Product video deleted successfully",
+      deleted_video_id: videoId
+    });
+
+  } catch (error) {
+    console.error("Error deleting product video:", error);
+    return res.status(500).json({
+      message: "Failed to delete product video",
+      error: error.message
+    });
+  }
+};
+
 // Bulk update stock for multiple products
 const bulkUpdateStock = async (req, res) => {
   try {
@@ -1753,6 +1898,8 @@ module.exports = {
   updateProductStatus,
   updateProductImages,
   deleteProductImage,
+  updateProductVideos,
+  deleteProductVideo,
   bulkUpdateStock,
   bulkUpdateStatus,
 };

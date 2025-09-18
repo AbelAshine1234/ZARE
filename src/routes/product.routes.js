@@ -2,13 +2,22 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const { rootValidation, validateBody } = require('../middlewares/validate');
-const { productSchema } = require('../schemas/product.schema');
+const {
+  productSchema,
+  vendorProductUpdateSchema
+} = require('../schemas/product.schema');
 const productController = require('../controllers/product.controller');
 const { authenticate, authorizeAdmin } = require('../middlewares/authMiddleware');
 const jsonFieldsParser = require('../middlewares/jsonFieldsParser');
 
-// Apply authentication middleware to all routes
+// Get all products with pagination and filtering
+router.get('/', productController.getAllProducts);
+
+// Apply authentication middleware to all routes below this point
 router.use(authenticate);
+
+// Get current vendor owner's products (must come before /:id route)
+router.get('/my-products', productController.getVendorProducts);
 
 // Product ownership validation middleware (for update/delete operations)
 const validateProductOwnership = async (req, res, next) => {
@@ -155,12 +164,6 @@ router.post(
   productController.createProduct
 );
 
-// Get all products with pagination and filtering
-router.get('/', productController.getAllProducts);
-
-// Get current vendor owner's products (must come before /:id route)
-router.get('/my-products', productController.getVendorProducts);
-
 // Get product by ID
 router.get('/:id', productController.getProductById);
 
@@ -169,6 +172,9 @@ router.get('/admin/dashboard/stats', authorizeAdmin, productController.getAdminP
 router.get('/admin/dashboard/all', authorizeAdmin, productController.getAdminAllProducts);
 router.get('/admin/dashboard/pending', authorizeAdmin, productController.getPendingProducts);
 router.get('/admin/dashboard/vendor/:vendorId', authorizeAdmin, productController.getProductsByVendor);
+
+// Admin product detail route
+router.get('/admin/:id', authorizeAdmin, productController.getProductById);
 
 // Admin product management
 router.put('/admin/:id/approve', authorizeAdmin, productController.approveProduct);
@@ -183,6 +189,14 @@ router.delete('/admin/:id/images/:imageId', authorizeAdmin, productController.de
 router.put('/admin/bulk/stock', authorizeAdmin, productController.bulkUpdateStock);
 router.put('/admin/bulk/status', authorizeAdmin, productController.bulkUpdateStatus);
 
+// Vendor product image management (must come before /:id route)
+router.put('/:id/images', validateProductOwnership, upload.array('images', 10), productController.updateProductImages);
+router.delete('/:id/images/:imageId', validateProductOwnership, productController.deleteProductImage);
+
+// Vendor product video management
+router.put('/:id/videos', validateProductOwnership, upload.array('videos', 5), productController.updateProductVideos);
+router.delete('/:id/videos/:videoId', validateProductOwnership, productController.deleteProductVideo);
+
 // Update product
 router.put(
   '/:id',
@@ -193,7 +207,7 @@ router.put(
   ]),
   rootValidation,
   jsonFieldsParser(['specs']), // Parse specs as JSON
-  validateBody(productSchema),
+  validateBody(vendorProductUpdateSchema), // Use vendor schema (no vendor_id required)
   productController.updateProduct
 );
 
